@@ -137,6 +137,7 @@ public class TupleDesc implements Serializable {
         // some code goes here
         for(int i = 0; i < items.size(); i++){
             String item = items.get(i).fieldName;
+            if(item == null) continue;
             if(item.equals(name)) return i;
         }
         throw new NoSuchElementException();
@@ -185,7 +186,7 @@ public class TupleDesc implements Serializable {
             i++;
         }
         TupleDesc mergedDesc = new TupleDesc(fieldTypes, fieldNames);
-        return null;
+        return mergedDesc;
     }
 
     /**
@@ -201,12 +202,18 @@ public class TupleDesc implements Serializable {
 
     public boolean equals(Object o) {
         // some code goes here
+        if(o == null) return false;
+        if(o.getClass() != TupleDesc.class) return false;
+
         TupleDesc anotherDesc = (TupleDesc) o;
         if(anotherDesc.getSize() != getSize()) return false;
         if(anotherDesc.numFields() != numFields()) return false;
         for(int i = 0; i < numFields(); i++) {
             String thisItemName = items.get(i).fieldName;
             String anotherItemName = anotherDesc.getFieldName(i);
+            if(thisItemName == null) return anotherItemName == null;
+            if(anotherItemName == null) return false;
+
             if(!thisItemName.equals(anotherItemName)) return false;
             Type thisItemType = items.get(i).fieldType;
             Type anotherItemType = anotherDesc.getFieldType(i);
