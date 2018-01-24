@@ -33,3 +33,9 @@ Tuple:
   2. RecordId
   3. array of Fields (Field)
 
+
+Catalog:
+  1. String (table name)
+  2. String (primary key)
+  3. DbFile
+    1. ID

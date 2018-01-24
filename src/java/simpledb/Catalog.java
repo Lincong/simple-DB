@@ -5,7 +5,6 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * The Catalog keeps track of all available tables in the database and their
@@ -22,14 +21,29 @@ public class Catalog {
      * Constructor.
      * Creates a new, empty catalog.
      */
+
+    class TableInfo {
+        String name;
+        DbFile file;
+        String primarykey;
+        TableInfo(String name, DbFile f, String k) {
+            this.name = name;
+            file = f;
+            primarykey = k;
+        }
+    }
+
+    private List<TableInfo> catalogs;
+
     public Catalog() {
         // some code goes here
+        catalogs = new LinkedList<>();
     }
 
     /**
      * Add a new table to the catalog.
      * This table's contents are stored in the specified DbFile.
-     * @param file the contents of the table to add;  file.getId() is the identfier of
+     * @param file the contents of the table to add;  file.getId() is the identifier of
      *    this file/tupledesc param for the calls getTupleDesc and getFile
      * @param name the name of the table -- may be an empty string.  May not be null.  If a name
      * conflict exists, use the last table to be added as the table for a given name.
@@ -37,6 +51,21 @@ public class Catalog {
      */
     public void addTable(DbFile file, String name, String pkeyField) {
         // some code goes here
+        if(name == null) return;
+        TableInfo newTable = new TableInfo(name, file, pkeyField);
+        for(int i = 0; i < catalogs.size(); i++) {
+            TableInfo currTable = catalogs.get(i);
+            if (currTable.file.getId() == newTable.file.getId()){
+                catalogs.remove(i);
+                i--;
+                continue;
+            }
+            if (newTable.name.length() > 0 && currTable.name.equals(newTable.name)){
+                catalogs.remove(i);
+                i--;
+            }
+        }
+        catalogs.add(newTable);
     }
 
     public void addTable(DbFile file, String name) {
@@ -60,7 +89,11 @@ public class Catalog {
      */
     public int getTableId(String name) throws NoSuchElementException {
         // some code goes here
-        return 0;
+        for(TableInfo table : catalogs){
+            if(table.name.equals(name))
+                return table.file.getId();
+        }
+        throw new NoSuchElementException();
     }
 
     /**
@@ -71,7 +104,7 @@ public class Catalog {
      */
     public TupleDesc getTupleDesc(int tableid) throws NoSuchElementException {
         // some code goes here
-        return null;
+        return getDatabaseFile(tableid).getTupleDesc();
     }
 
     /**
@@ -82,27 +115,40 @@ public class Catalog {
      */
     public DbFile getDatabaseFile(int tableid) throws NoSuchElementException {
         // some code goes here
-        return null;
+        return getTableInfo(tableid).file;
+    }
+
+    private TableInfo getTableInfo(int tableid) {
+        for(TableInfo table : catalogs){
+            if(table.file.getId() == tableid)
+                return table;
+        }
+        throw new NoSuchElementException();
     }
 
     public String getPrimaryKey(int tableid) {
         // some code goes here
-        return null;
+        return getTableInfo(tableid).primarykey;
     }
 
     public Iterator<Integer> tableIdIterator() {
         // some code goes here
-        return null;
+        Set<Integer> tableIds = new HashSet<>();
+        for(TableInfo table : catalogs) {
+            tableIds.add(table.file.getId());
+        }
+        return tableIds.iterator();
     }
 
     public String getTableName(int id) {
         // some code goes here
-        return null;
+        return getTableInfo(id).name;
     }
     
     /** Delete all tables from the catalog */
     public void clear() {
         // some code goes here
+        catalogs.clear();
     }
     
     /**
