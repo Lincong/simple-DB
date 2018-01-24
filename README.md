@@ -39,3 +39,11 @@ Catalog:
   2. String (primary key)
   3. DbFile
     1. ID
+
+
+HeapFile (one for each table):
+  1. set of HeapPage (each page has BufferPool.DEFAULT_PAGE_SIZE bytes)
+
+HeapPage:
+  1. a set of slots
+  2. a header (bitmap)
