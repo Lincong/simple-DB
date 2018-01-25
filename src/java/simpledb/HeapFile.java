@@ -84,7 +84,11 @@ public class HeapFile implements DbFile {
 
         try {
             int offset = pageSize * pid.getPageNumber();
-            fr.skip(offset);
+            if(offset != fr.skip(offset)) {
+                System.out.println("How come we can't skip " + offset + "bytes for file: " + f.toString());
+                return null;
+            }
+
         } catch (IOException e) {
             e.printStackTrace();
             System.out.println("Offset failed for file: " + f.toString());
@@ -122,7 +126,11 @@ public class HeapFile implements DbFile {
      */
     public int numPages() {
         // some code goes here
-        return 0;
+        long totalBytes = f.length();
+        if(totalBytes % BufferPool.getPageSize() != 0)
+            System.out.println("That's weird. Why is the file size not the multiple of page size");
+
+        return (int) (totalBytes / BufferPool.getPageSize());
     }
 
     // see DbFile.java for javadocs

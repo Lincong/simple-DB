@@ -1,8 +1,9 @@
 package simpledb;
 
-import java.io.*;
-
-import java.util.concurrent.ConcurrentHashMap;
+import java.io.IOException;
+import java.util.Map;
+import java.util.LinkedHashMap;
+import java.util.NoSuchElementException;
 
 /**
  * BufferPool manages the reading and writing of pages into memory from
@@ -26,6 +27,38 @@ public class BufferPool {
     constructor instead. */
     public static final int DEFAULT_PAGES = 50;
 
+
+    class LRUPool {
+        int remainingPairNum;
+        Map<Integer, Integer> m;
+
+        public LRUPool(int capacity) {
+            this.remainingPairNum = capacity;
+            this.m = new LinkedHashMap<>(DEFAULT_PAGE_SIZE, 0.75f, true);
+        }
+
+        public int get(int key) {
+            if(!m.containsKey(key))return -1;
+            return m.get(key);
+        }
+
+        public void put(int key, int value) {
+            boolean hasKey = this.m.containsKey(key);
+            this.m.put(key, value);
+            if(!hasKey){
+                this.remainingPairNum--;
+                while (this.remainingPairNum < 0) {
+                    int k = this.m.keySet().iterator().next();
+                    this.m.remove(k);
+                    this.remainingPairNum++;
+                }
+            }
+        }
+    }
+
+    private int maxNumPages;
+    private int currNumPages;
+    private LRUPool pool;
     /**
      * Creates a BufferPool that caches up to numPages pages.
      *
@@ -33,6 +66,8 @@ public class BufferPool {
      */
     public BufferPool(int numPages) {
         // some code goes here
+        maxNumPages = numPages;
+        pool = new LRUPool(numPages);
     }
     
     public static int getPageSize() {
@@ -67,6 +102,20 @@ public class BufferPool {
     public  Page getPage(TransactionId tid, PageId pid, Permissions perm)
         throws TransactionAbortedException, DbException {
         // some code goes here
+        Catalog catalog = Database.getCatalog();
+        HeapFile dbFile;
+        try {
+            dbFile = (HeapFile) catalog.getDatabaseFile(pid.getTableId());
+
+        } catch (NoSuchElementException e) {
+            e.printStackTrace();
+            System.out.println("Can not get DbFile for table with ID: " + pid.getTableId());
+            return null;
+        }
+
+        Page p = dbFile.readPage(pid);
+
+
         return null;
     }
 
