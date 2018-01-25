@@ -72,48 +72,49 @@ public class HeapFile implements DbFile {
     // see DbFile.java for javadocs
     public Page readPage(PageId pid) {
         // some code goes here
-        Reader fr;
         int pageSize = BufferPool.getPageSize();
-        try {
-            fr = new FileReader(f);
+        int offset = pageSize * pid.getPageNumber();
 
+        byte[] pageData = new byte[pageSize];
+        try {
+            RandomAccessFile f = new RandomAccessFile(this.f,"r");
+            if (offset + pageSize > f.length()) {
+                System.err.println("Page offset exceeds max size, error!");
+                System.exit(1);
+            }
+            f.seek(offset);
+            f.readFully(pageData);
+            f.close();
         } catch (FileNotFoundException e) {
-            e.printStackTrace();
-            System.out.println("HeapFile not found: " + f.toString());
-            return null;
-        }
-
-        try {
-            int offset = pageSize * pid.getPageNumber();
-            if(offset != fr.skip(offset)) {
-                System.out.println("How come we can't skip " + offset + "bytes for file: " + f.toString());
-                return null;
-            }
-
+            System.err.println("FileNotFoundException: " + e.getMessage());
+            throw new IllegalArgumentException();
         } catch (IOException e) {
-            e.printStackTrace();
-            System.out.println("Offset failed for file: " + f.toString());
-            return null;
-        }
-        byte[] data = new byte[pageSize];
-        try {
-            for (int i = 0; i < pageSize; i++) {
-                data[i] = (byte) fr.read();
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-            System.out.println("Reading byte failed for file: " + f.toString());
+            System.err.println("Caught IOException: " + e.getMessage());
+            throw new IllegalArgumentException();
         }
 
         HeapPage readPage;
         try {
-            readPage = new HeapPage((HeapPageId) pid, data);
+            readPage = new HeapPage((HeapPageId) pid, pageData);
         } catch (IOException e) {
             e.printStackTrace();
             System.out.println("Creating new page failed for file: " + f.toString());
             return null;
         }
         return readPage;
+    }
+
+    private void printByteArray(byte[] data, int len) {
+        if(len <= 0)
+            len = data.length;
+        System.out.println("Byte array: ");
+        for (byte b : data) {
+            if(len <= 0)
+                break;
+            len--;
+            System.out.println(Integer.toBinaryString(b & 255 | 256).substring(1));
+        }
+        System.out.println("Byte array end ---");
     }
 
     // see DbFile.java for javadocs

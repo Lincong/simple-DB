@@ -285,6 +285,7 @@ public class HeapPage implements Page {
      */
     public int getNumEmptySlots() {
         // some code goes here
+        System.out.println("this.numSlots: " + this.numSlots);
         return emptySlotNum;
     }
 
