@@ -325,10 +325,11 @@ public class HeapPage implements Page {
 
     public void printHeader() {
         System.out.print("header: ");
-        for(byte b : header) {
+        for(int i = 0; i < header.length; i++) {
+            byte b = header[i];
             StringBuilder binaryStringBuilder = new StringBuilder();
-            for(int i = 0; i < 8; i++)
-                binaryStringBuilder.append(((0x80 >>> i) & b) == 0? '0':'1');
+            for(int j = 0; j < 8; j++)
+                binaryStringBuilder.append(((0x80 >>> j) & b) == 0 ? '0':'1');
             System.out.print(binaryStringBuilder.toString());
         }
         System.out.println();
