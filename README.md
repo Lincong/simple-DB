@@ -52,3 +52,10 @@ HeapFile (one for each table):
 HeapPage:
   1. a set of slots (一个slot一个tuple, tuple有固定的大小 )
   2. a header (bitmap)
+    class fields:
+        1. pageID
+        2. tuple description
+        3. header (bitmap)
+        4. array of Tuples
+        5. number of slots (maximum number of tuples)
+        6. number of empty slots

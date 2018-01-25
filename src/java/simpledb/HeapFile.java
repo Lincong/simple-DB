@@ -22,8 +22,15 @@ public class HeapFile implements DbFile {
      *            the file that stores the on-disk backing store for this heap
      *            file.
      */
+    private File f;
+    private TupleDesc td;
+    private int ID;
+
     public HeapFile(File f, TupleDesc td) {
         // some code goes here
+        this.f = f;
+        this.td = td;
+        ID = f.getAbsoluteFile().hashCode();
     }
 
     /**
@@ -33,7 +40,7 @@ public class HeapFile implements DbFile {
      */
     public File getFile() {
         // some code goes here
-        return null;
+        return f;
     }
 
     /**
@@ -47,7 +54,7 @@ public class HeapFile implements DbFile {
      */
     public int getId() {
         // some code goes here
-        throw new UnsupportedOperationException("implement this");
+        return ID;
     }
 
     /**
@@ -57,13 +64,51 @@ public class HeapFile implements DbFile {
      */
     public TupleDesc getTupleDesc() {
         // some code goes here
-        throw new UnsupportedOperationException("implement this");
+//        throw new UnsupportedOperationException("implement this");
+        return td;
     }
 
     // see DbFile.java for javadocs
     public Page readPage(PageId pid) {
         // some code goes here
-        return null;
+        Reader fr;
+        int pageSize = BufferPool.getPageSize();
+        try {
+            fr = new FileReader(f);
+
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+            System.out.println("HeapFile not found: " + f.toString());
+            return null;
+        }
+
+        try {
+            int offset = pageSize * pid.getPageNumber();
+            fr.skip(offset);
+        } catch (IOException e) {
+            e.printStackTrace();
+            System.out.println("Offset failed for file: " + f.toString());
+            return null;
+        }
+        byte[] data = new byte[pageSize];
+        try {
+            for (int i = 0; i < pageSize; i++) {
+                data[i] = (byte) fr.read();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+            System.out.println("Reading byte failed for file: " + f.toString());
+        }
+
+        HeapPage readPage;
+        try {
+            readPage = new HeapPage((HeapPageId) pid, data);
+        } catch (IOException e) {
+            e.printStackTrace();
+            System.out.println("Creating new page failed for file: " + f.toString());
+            return null;
+        }
+        return readPage;
     }
 
     // see DbFile.java for javadocs
