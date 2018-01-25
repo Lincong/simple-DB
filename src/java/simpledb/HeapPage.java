@@ -82,7 +82,7 @@ public class HeapPage implements Page {
      */
     private int getHeaderSize() {
         // some code goes here
-        return (int) Math.ceil(numSlots / 8);
+        return (int) Math.ceil( (double)numSlots / 8.0);
     }
     
     /** Return a view of this page before it was modified
@@ -320,7 +320,18 @@ public class HeapPage implements Page {
     }
 
     private boolean isNthBitSet(byte byteVal, int n) {
-        return (byteVal & (1L << n)) == 1;
+        return ((byteVal >> n) & 1) == 1;
+    }
+
+    public void printHeader() {
+        System.out.print("header: ");
+        for(byte b : header) {
+            StringBuilder binaryStringBuilder = new StringBuilder();
+            for(int i = 0; i < 8; i++)
+                binaryStringBuilder.append(((0x80 >>> i) & b) == 0? '0':'1');
+            System.out.print(binaryStringBuilder.toString());
+        }
+        System.out.println();
     }
 }
 
