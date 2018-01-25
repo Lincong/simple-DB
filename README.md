@@ -28,11 +28,16 @@ TupleDesc:
 
 RecordId (to a specific page of a specific table):
 
+Field:
+    1. StringField
+    2. IntField
+
 Tuple:
   1. TupleDesc (schema)
   2. RecordId
+    1. pageID
+    2. tupleNum
   3. array of Fields (Field)
-
 
 Catalog:
   1. String (table name)
@@ -45,5 +50,5 @@ HeapFile (one for each table):
   1. set of HeapPage (each page has BufferPool.DEFAULT_PAGE_SIZE bytes)
 
 HeapPage:
-  1. a set of slots
+  1. a set of slots (一个slot一个tuple, tuple有固定的大小 )
   2. a header (bitmap)

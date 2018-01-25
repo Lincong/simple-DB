@@ -2,7 +2,7 @@ package simpledb;
 
 import java.util.*;
 import java.io.*;
-
+import java.lang.Math;
 /**
  * Each instance of HeapPage stores data for one page of HeapFiles and 
  * implements the Page interface that is used by BufferPool.
@@ -21,7 +21,7 @@ public class HeapPage implements Page {
 
     byte[] oldData;
     private final Byte oldDataLock=new Byte((byte)0);
-
+    private int emptySlotNum;
     /**
      * Create a HeapPage from a set of bytes of data read from disk.
      * The format of a HeapPage is a set of header bytes indicating
@@ -38,22 +38,26 @@ public class HeapPage implements Page {
      * @see Catalog#getTupleDesc
      * @see BufferPool#getPageSize()
      */
+    // when a HeapPage is created, its data are given in an array
     public HeapPage(HeapPageId id, byte[] data) throws IOException {
         this.pid = id;
         this.td = Database.getCatalog().getTupleDesc(id.getTableId());
         this.numSlots = getNumTuples();
         DataInputStream dis = new DataInputStream(new ByteArrayInputStream(data));
-
         // allocate and read the header slots of this page
         header = new byte[getHeaderSize()];
         for (int i=0; i<header.length; i++)
             header[i] = dis.readByte();
         
         tuples = new Tuple[numSlots];
+        this.emptySlotNum = 0;
         try{
             // allocate and read the actual records of this page
-            for (int i=0; i<tuples.length; i++)
-                tuples[i] = readNextTuple(dis,i);
+            for (int i=0; i<tuples.length; i++) {
+                tuples[i] = readNextTuple(dis, i);
+                if (!isSlotUsed(i))
+                    this.emptySlotNum++;
+            }
         }catch(NoSuchElementException e){
             e.printStackTrace();
         }
@@ -65,21 +69,20 @@ public class HeapPage implements Page {
     /** Retrieve the number of tuples on this page.
         @return the number of tuples on this page
     */
-    private int getNumTuples() {        
+    private int getNumTuples() {
         // some code goes here
-        return 0;
-
+        // floor((BufferPool.getPageSize()*8) / (tuple size * 8 + 1))
+        int tupleSize = td.getSize();
+        return (int) Math.floor((BufferPool.getPageSize() * 8) / (double)(tupleSize * 8 + 1));
     }
 
     /**
      * Computes the number of bytes in the header of a page in a HeapFile with each tuple occupying tupleSize bytes
      * @return the number of bytes in the header of a page in a HeapFile with each tuple occupying tupleSize bytes
      */
-    private int getHeaderSize() {        
-        
+    private int getHeaderSize() {
         // some code goes here
-        return 0;
-                 
+        return (int) Math.ceil(numSlots / 8);
     }
     
     /** Return a view of this page before it was modified
@@ -111,8 +114,8 @@ public class HeapPage implements Page {
      * @return the PageId associated with this page.
      */
     public HeapPageId getId() {
-    // some code goes here
-    throw new UnsupportedOperationException("implement this");
+        // some code goes here
+        return pid;
     }
 
     /**
@@ -138,7 +141,7 @@ public class HeapPage implements Page {
         t.setRecordId(rid);
         try {
             for (int j=0; j<td.numFields(); j++) {
-                Field f = td.getFieldType(j).parse(dis);
+                Field f = td.getFieldType(j).parse(dis); // data is in the Field
                 t.setField(j, f);
             }
         } catch (java.text.ParseException e) {
@@ -282,7 +285,7 @@ public class HeapPage implements Page {
      */
     public int getNumEmptySlots() {
         // some code goes here
-        return 0;
+        return emptySlotNum;
     }
 
     /**
@@ -290,7 +293,8 @@ public class HeapPage implements Page {
      */
     public boolean isSlotUsed(int i) {
         // some code goes here
-        return false;
+        byte byteVal = header[i / 8];
+        return isNthBitSet(byteVal, i % 8);
     }
 
     /**
@@ -310,5 +314,8 @@ public class HeapPage implements Page {
         return null;
     }
 
+    private boolean isNthBitSet(byte byteVal, int n) {
+        return (byteVal & (1L << n)) == 1;
+    }
 }
 
