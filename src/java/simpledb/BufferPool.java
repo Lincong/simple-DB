@@ -118,7 +118,7 @@ public class BufferPool {
 
         } catch (NoSuchElementException e) {
             e.printStackTrace();
-            throw new DbException(("Can not get DbFile for table with ID: " + pid.getTableId());
+            throw new DbException("Can not get DbFile for table with ID: " + pid.getTableId());
         }
 
         HeapPage pg = pool.getPage(pid.hashCode()); // check if page is already in the pool

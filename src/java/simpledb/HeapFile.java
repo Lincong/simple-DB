@@ -193,6 +193,7 @@ class HeapFileIterator extends AbstractDbFileIterator {
      */
     @Override
     protected Tuple readNext() throws TransactionAbortedException, DbException {
+        if(pageIterator == null) return null;
         Tuple t;
         if(pageIterator.hasNext()) {
             t = pageIterator.next();
@@ -219,6 +220,7 @@ class HeapFileIterator extends AbstractDbFileIterator {
         // Ensures that a future call to next() will fail
         // next = null;
         currPageNum = 0; // reset
+        pageIterator = null;
         super.close();
     }
 
