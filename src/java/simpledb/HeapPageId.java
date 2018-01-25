@@ -55,7 +55,7 @@ public class HeapPageId implements PageId {
     public boolean equals(Object o) {
         // some code goes here
         if(o == null) return false;
-        if(o.getClass() != PageId.class) return false;
+        if(o.getClass() != HeapPageId.class) return false;
         return o.hashCode() == hashCode();
     }
 

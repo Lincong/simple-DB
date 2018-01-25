@@ -311,7 +311,12 @@ public class HeapPage implements Page {
      */
     public Iterator<Tuple> iterator() {
         // some code goes here
-        return null;
+        List<Tuple> tuplesOnPage = new LinkedList<>();
+        for(int i = 0; i < tuples.length; i++) {
+            if (isSlotUsed(i))
+                tuplesOnPage.add(tuples[i]);
+        }
+        return tuplesOnPage.iterator();
     }
 
     private boolean isNthBitSet(byte byteVal, int n) {
