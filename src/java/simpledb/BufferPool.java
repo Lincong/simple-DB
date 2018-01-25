@@ -28,37 +28,46 @@ public class BufferPool {
     public static final int DEFAULT_PAGES = 50;
 
 
-    class LRUPool {
+    class LRUPool <T> {
         int remainingPairNum;
-        Map<Integer, Integer> m;
+        Map<Integer, T> m;
 
         public LRUPool(int capacity) {
             this.remainingPairNum = capacity;
             this.m = new LinkedHashMap<>(DEFAULT_PAGE_SIZE, 0.75f, true);
         }
 
-        public int get(int key) {
-            if(!m.containsKey(key))return -1;
-            return m.get(key);
+        public T getPage(int pageHashCode) {
+            if(!m.containsKey(pageHashCode)) return null;
+            return m.get(pageHashCode);
         }
 
-        public void put(int key, int value) {
-            boolean hasKey = this.m.containsKey(key);
-            this.m.put(key, value);
+        public void putPage(int pageHashCode, T page) throws DbException {
+            boolean hasKey = this.m.containsKey(pageHashCode);
+            this.m.put(pageHashCode, page);
             if(!hasKey){
                 this.remainingPairNum--;
+                // for now
+                if (this.remainingPairNum < 0)
+                    throw new DbException("Buffer pool is full!");
+
                 while (this.remainingPairNum < 0) {
                     int k = this.m.keySet().iterator().next();
+                    evictPage(this.m.get(k)); // remove the page from the buffer pool
                     this.m.remove(k);
                     this.remainingPairNum++;
                 }
             }
         }
+
+        private void evictPage(T page) {
+
+        }
     }
 
     private int maxNumPages;
     private int currNumPages;
-    private LRUPool pool;
+    private LRUPool<HeapPage> pool;
     /**
      * Creates a BufferPool that caches up to numPages pages.
      *
@@ -67,7 +76,7 @@ public class BufferPool {
     public BufferPool(int numPages) {
         // some code goes here
         maxNumPages = numPages;
-        pool = new LRUPool(numPages);
+        pool = new LRUPool<>(numPages);
     }
     
     public static int getPageSize() {
@@ -113,10 +122,14 @@ public class BufferPool {
             return null;
         }
 
-        Page p = dbFile.readPage(pid);
-
-
-        return null;
+        HeapPage pg = pool.getPage(pid.hashCode()); // check if page is already in the pool
+        if(pg != null)
+            return pg;
+        // read page from the disk
+        pg = (HeapPage) dbFile.readPage(pid);
+        // store the newly read page into the buffer pool
+        pool.putPage(pg.hashCode(), pg);
+        return pg;
     }
 
     /**
