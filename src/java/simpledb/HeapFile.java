@@ -157,3 +157,36 @@ public class HeapFile implements DbFile {
 
 }
 
+class HeapFileIterator extends AbstractDbFileIterator {
+
+    HeapFileIterator(){
+
+    }
+
+    /**
+     * Open this iterator by getting an iterator on the first leaf page
+     */
+    public void open() throws DbException, TransactionAbortedException {
+
+    }
+
+    /**
+     * Read the next tuple either from the current page if it has more tuples or
+     * from the next page by following the right sibling pointer.
+     *
+     * @return the next tuple, or null if none exists
+     */
+    @Override
+    protected Tuple readNext() throws TransactionAbortedException, DbException {
+        return null;
+    }
+
+    /**
+     * rewind this iterator back to the beginning of the tuples
+     */
+    public void rewind() throws DbException, TransactionAbortedException {
+        close();
+        open();
+    }
+}
+
