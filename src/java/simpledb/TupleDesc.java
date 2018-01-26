@@ -248,7 +248,7 @@ public class TupleDesc implements Serializable {
         return ret;
     }
 
-    public Object makeCopyWithAlias(String alias) {
+    public TupleDesc makeCopyWithAlias(String alias) {
         // TODO
         int itemLen = items.size();
         Type[] typeAr = new Type[itemLen];
