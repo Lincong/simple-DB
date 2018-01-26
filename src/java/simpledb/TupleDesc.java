@@ -248,8 +248,26 @@ public class TupleDesc implements Serializable {
         return ret;
     }
 
-    public TupleDesc makeCopy() {
+    public Object makeCopyWithAlias(String alias) {
         // TODO
-        return null;
+        int itemLen = items.size();
+        Type[] typeAr = new Type[itemLen];
+        String[] fieldAr = new String[itemLen];
+        for(int i = 0; i < itemLen; i ++){
+            TDItem item = items.get(i);
+            String originalName = item.fieldName;
+            if (originalName == null)
+                originalName = "null";
+
+            if (alias == null)
+                alias = "null";
+
+            String name = alias + "." + originalName;
+            fieldAr[i] = name;
+            Type type = item.fieldType;
+            typeAr[i] = type;
+        }
+        TupleDesc ret = new TupleDesc(typeAr, fieldAr);
+        return ret;
     }
 }
