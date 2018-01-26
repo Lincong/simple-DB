@@ -208,12 +208,12 @@ class HeapFileIterator extends AbstractDbFileIterator {
     }
 
     private boolean getIteratorForNextPage() throws DbException, TransactionAbortedException {
-        currPageNum++;
         if (currPageNum >= totalPageNum)
             return false;
         HeapPageId pageToReadID = new HeapPageId(heapFile.getId(), currPageNum);
         HeapPage newPage = (HeapPage) bufferPool.getPage(tid, pageToReadID, Permissions.READ_ONLY);
         pageIterator = newPage.iterator();
+        currPageNum++;
         return true;
     }
 
