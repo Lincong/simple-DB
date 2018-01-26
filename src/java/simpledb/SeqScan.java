@@ -11,6 +11,12 @@ public class SeqScan implements OpIterator {
 
     private static final long serialVersionUID = 1L;
 
+    private String alias;
+    private String tableName;
+    private TupleDesc description;
+    private TransactionId tid;
+    private int tableId;
+
     /**
      * Creates a sequential scan over the specified table as a part of the
      * specified transaction.
@@ -29,6 +35,22 @@ public class SeqScan implements OpIterator {
      */
     public SeqScan(TransactionId tid, int tableid, String tableAlias) {
         // some code goes here
+    }
+
+    private void init(TransactionId tid, int tableId, String tableAlias) {
+        this.tid = tid;
+        this.tableId = tableId;
+        alias = tableAlias;
+        TupleDesc desc;
+        try {
+            desc = Database.getCatalog().getTupleDesc(tableId);
+
+        } catch (NoSuchElementException e) {
+            e.printStackTrace();
+            System.out.println("No such a tuple description for table with ID: " + tableId);
+            throw new NoSuchElementException();
+        }
+        description = desc.makeCopy();
     }
 
     /**
@@ -107,4 +129,6 @@ public class SeqScan implements OpIterator {
             TransactionAbortedException {
         // some code goes here
     }
+
+
 }

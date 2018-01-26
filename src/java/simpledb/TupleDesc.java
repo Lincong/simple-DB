@@ -247,4 +247,9 @@ public class TupleDesc implements Serializable {
         }
         return ret;
     }
+
+    public TupleDesc makeCopy() {
+        // TODO
+        return null;
+    }
 }
