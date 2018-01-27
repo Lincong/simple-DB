@@ -262,8 +262,7 @@ public class TupleDesc implements Serializable {
             if (alias == null)
                 alias = "null";
 
-            String name = alias + "." + originalName;
-            fieldAr[i] = name;
+            fieldAr[i] =  alias + "." + originalName;
             Type type = item.fieldType;
             typeAr[i] = type;
         }

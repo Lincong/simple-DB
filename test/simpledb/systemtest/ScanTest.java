@@ -98,7 +98,7 @@ public class ScanTest extends SimpleDbTestBase {
         SystemTestUtil.matchTuples(table, tuples);
         assertEquals(PAGES, table.readCount);
         table.readCount = 0;
-
+        System.out.println("Second scan starts");
         // Scan the table again: all pages should be cached
         SystemTestUtil.matchTuples(table, tuples);
         assertEquals(0, table.readCount);

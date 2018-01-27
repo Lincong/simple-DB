@@ -34,7 +34,8 @@ public class BufferPool {
 
         public LRUPool(int capacity) {
             this.remainingPairNum = capacity;
-            this.m = new LinkedHashMap<>(DEFAULT_PAGE_SIZE, 0.75f, true);
+            System.out.println("LRU buffer pool capacity is: " + this.remainingPairNum);
+            this.m = new LinkedHashMap<>(remainingPairNum, 0.75f, true);
         }
 
         public T getPage(int pageHashCode) {
@@ -43,15 +44,22 @@ public class BufferPool {
         }
 
         public void putPage(int pageHashCode, T page) throws DbException {
+            System.out.println("In putPage, remaining capacity is: " + this.remainingPairNum);
+            System.out.println("Trying to cache page: " + pageHashCode);
+            if (this.remainingPairNum < 0)
+                throw new DbException("Buffer pool is full!");
             boolean hasKey = this.m.containsKey(pageHashCode);
             this.m.put(pageHashCode, page);
             if(!hasKey){
+                System.out.println("Page not in buffer pool");
                 this.remainingPairNum--;
                 // for now
-                if (this.remainingPairNum < 0)
-                    throw new DbException("Buffer pool is full!");
+                if (this.remainingPairNum < 0) {
+                    // TODO: eviction
+                }
 
                 while (this.remainingPairNum < 0) {
+                    System.out.println("Remove page from buffer pool");
                     int k = this.m.keySet().iterator().next();
                     evictPage(this.m.get(k)); // remove the page from the buffer pool
                     this.m.remove(k);
@@ -76,7 +84,7 @@ public class BufferPool {
     public BufferPool(int numPages) {
         // some code goes here
         maxNumPages = numPages;
-        pool = new LRUPool<>(numPages);
+        pool = new LRUPool<>(maxNumPages);
     }
     
     public static int getPageSize() {
@@ -120,14 +128,18 @@ public class BufferPool {
             e.printStackTrace();
             throw new DbException("Can not get DbFile for table with ID: " + pid.getTableId());
         }
-
+        System.out.println("----Try to read page in buffer pool: " + pid.hashCode());
         HeapPage pg = pool.getPage(pid.hashCode()); // check if page is already in the pool
-        if(pg != null)
+        if(pg != null) {
+            System.out.println("Page in buffer pool!");
             return pg;
+        }
+        System.out.println("Not in buffer pool");
         // read page from the disk
         pg = (HeapPage) dbFile.readPage(pid);
         // store the newly read page into the buffer pool
-        pool.putPage(pg.hashCode(), pg);
+        pool.putPage(pid.hashCode(), pg);
+        System.out.println("----End of read page in buffer pool");
         return pg;
     }
 

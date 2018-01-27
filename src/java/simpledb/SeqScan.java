@@ -51,7 +51,7 @@ public class SeqScan implements OpIterator {
         } catch (NoSuchElementException e) {
             e.printStackTrace();
             System.out.println("No such a tuple description for table with ID: " + tableId);
-            throw new NoSuchElementException();
+            return;
         }
         description = desc.makeCopyWithAlias(alias);
     }
