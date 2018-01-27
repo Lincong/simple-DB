@@ -9,6 +9,8 @@ public class Filter extends Operator {
 
     private static final long serialVersionUID = 1L;
 
+    private OpIterator childOperator;
+    private Predicate pred;
     /**
      * Constructor accepts a predicate to apply and a child operator to read
      * tuples to filter from.
@@ -20,29 +22,38 @@ public class Filter extends Operator {
      */
     public Filter(Predicate p, OpIterator child) {
         // some code goes here
+        pred = p;
+        childOperator = child;
     }
 
     public Predicate getPredicate() {
         // some code goes here
-        return null;
+        return pred;
     }
 
     public TupleDesc getTupleDesc() {
         // some code goes here
-        return null;
+        return childOperator.getTupleDesc();
     }
 
     public void open() throws DbException, NoSuchElementException,
             TransactionAbortedException {
         // some code goes here
+        childOperator.open();
+        super.open();
+
     }
 
     public void close() {
         // some code goes here
+        childOperator.close();
+        super.close();
     }
 
     public void rewind() throws DbException, TransactionAbortedException {
         // some code goes here
+        close();
+        open();
     }
 
     /**
@@ -57,18 +68,27 @@ public class Filter extends Operator {
     protected Tuple fetchNext() throws NoSuchElementException,
             TransactionAbortedException, DbException {
         // some code goes here
+        Tuple ret;
+        while (childOperator.hasNext()){
+            ret = childOperator.next();
+            if(pred.filter(ret))
+                return ret;
+        }
         return null;
     }
 
     @Override
     public OpIterator[] getChildren() {
         // some code goes here
-        return null;
+        OpIterator [] childOperators = new OpIterator[1];
+        childOperators[0] = childOperator;
+        return childOperators;
     }
 
     @Override
     public void setChildren(OpIterator[] children) {
         // some code goes here
+        assert children.length == 1;
+        childOperator = children[0];
     }
-
 }

@@ -59,3 +59,8 @@ HeapPage:
         4. array of Tuples
         5. number of slots (maximum number of tuples)
         6. number of empty slots
+
+Predicate:
+    1. 1 field (field ID that is the index of field in the Tuple object. Tuple里面的第几个field)
+    2. 1 operator (op)
+    3. 1 operand (Field)
