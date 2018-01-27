@@ -1,10 +1,9 @@
 package simpledb;
 
 import java.io.IOException;
-import java.util.Map;
 import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.NoSuchElementException;
-
 /**
  * BufferPool manages the reading and writing of pages into memory from
  * disk. Access methods call into it to retrieve pages, and it fetches
@@ -34,7 +33,6 @@ public class BufferPool {
 
         public LRUPool(int capacity) {
             this.remainingPairNum = capacity;
-            System.out.println("LRU buffer pool capacity is: " + this.remainingPairNum);
             this.m = new LinkedHashMap<>(remainingPairNum, 0.75f, true);
         }
 
@@ -44,22 +42,21 @@ public class BufferPool {
         }
 
         public void putPage(int pageHashCode, T page) throws DbException {
-            System.out.println("In putPage, remaining capacity is: " + this.remainingPairNum);
-            System.out.println("Trying to cache page: " + pageHashCode);
+            logger.log("In putPage, remaining capacity is: " + this.remainingPairNum);
+            logger.log("Trying to cache page: " + pageHashCode);
             if (this.remainingPairNum < 0)
                 throw new DbException("Buffer pool is full!");
             boolean hasKey = this.m.containsKey(pageHashCode);
             this.m.put(pageHashCode, page);
             if(!hasKey){
-                System.out.println("Page not in buffer pool");
+                logger.log("Page not in buffer pool");
                 this.remainingPairNum--;
-                // for now
                 if (this.remainingPairNum < 0) {
                     // TODO: eviction
                 }
 
                 while (this.remainingPairNum < 0) {
-                    System.out.println("Remove page from buffer pool");
+                    logger.log("Remove page from buffer pool");
                     int k = this.m.keySet().iterator().next();
                     evictPage(this.m.get(k)); // remove the page from the buffer pool
                     this.m.remove(k);
@@ -76,6 +73,7 @@ public class BufferPool {
     private int maxNumPages;
     private int currNumPages;
     private LRUPool<HeapPage> pool;
+    private DbLogger logger;
     /**
      * Creates a BufferPool that caches up to numPages pages.
      *
@@ -85,6 +83,7 @@ public class BufferPool {
         // some code goes here
         maxNumPages = numPages;
         pool = new LRUPool<>(maxNumPages);
+        logger = new DbLogger(getClass().getName(), getClass().getName() + ".log", true);
     }
     
     public static int getPageSize() {
@@ -128,18 +127,18 @@ public class BufferPool {
             e.printStackTrace();
             throw new DbException("Can not get DbFile for table with ID: " + pid.getTableId());
         }
-        System.out.println("----Try to read page in buffer pool: " + pid.hashCode());
+        logger.log("----Try to read page in buffer pool: " + pid.hashCode() + "----");
         HeapPage pg = pool.getPage(pid.hashCode()); // check if page is already in the pool
         if(pg != null) {
-            System.out.println("Page in buffer pool!");
+            logger.log("Page in buffer pool!");
             return pg;
         }
-        System.out.println("Not in buffer pool");
+        logger.log("Not in buffer pool");
         // read page from the disk
         pg = (HeapPage) dbFile.readPage(pid);
         // store the newly read page into the buffer pool
         pool.putPage(pid.hashCode(), pg);
-        System.out.println("----End of read page in buffer pool");
+        logger.log("----End of read page in buffer pool----");
         return pg;
     }
 
