@@ -73,6 +73,8 @@ public class Join extends Operator {
         // some code goes here
         child1.open();
         child2.open();
+        currChild1Tuple = child1.next();
+        currChild2Tuple = child2.next();
         super.open();
     }
 
@@ -80,6 +82,8 @@ public class Join extends Operator {
         // some code goes here
         child1.close();
         child2.close();
+        currChild1Tuple = null;
+        currChild2Tuple = null;
         super.close();
     }
 
@@ -110,18 +114,10 @@ public class Join extends Operator {
     protected Tuple fetchNext() throws TransactionAbortedException, DbException {
         // some code goes here
 
-        if(currChild1Tuple == null){
-            child1.rewind();
-            currChild1Tuple = child1.next();
+        while(!pred.filter(currChild1Tuple, currChild2Tuple)) {
+            if(!updateCurrTuplePair())
+                return null;
         }
-
-        if(currChild2Tuple == null){
-            child2.rewind();
-            currChild2Tuple = child2.next();
-        }
-
-        while(!pred.filter(currChild1Tuple, currChild2Tuple))
-            updateCurrTuples();
 
         // find the matching tuple pair!
         TupleDesc mergedDesc = TupleDesc.merge(currChild1Tuple.getTupleDesc(), currChild2Tuple.getTupleDesc());
@@ -135,23 +131,22 @@ public class Join extends Operator {
             t.setField(i, currChild2Tuple.getField(j));
             i++;
         }
-        updateCurrTuples();
+        updateCurrTuplePair();
         return t;
     }
 
-    private void updateCurrTuples() throws TransactionAbortedException, DbException {
+    private boolean updateCurrTuplePair() throws TransactionAbortedException, DbException {
         if(child2.hasNext()){
             currChild2Tuple = child2.next();
-            return;
+            return true;
         }
-        if(!child1.hasNext()) { // nested iteration is over
-            currChild1Tuple = null;
-            currChild2Tuple = null;
-            return;
-        }
+        if(!child1.hasNext())  // nested iteration is over
+            return false;
+
         currChild1Tuple = child1.next();
         child2.rewind();
         currChild2Tuple = child2.next();
+        return true;
     }
 
     @Override
