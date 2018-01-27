@@ -137,6 +137,10 @@ public class TestUtil {
 
             while (actual.hasNext()) {
                 Tuple next = actual.next();
+                System.out.println("---------");
+                System.out.println("Expected next join results: " + expectedTup.toString());
+                System.out.println("Actual next join results: " + next.toString());
+                System.out.println("---------\n");
                 if (compareTuples(expectedTup, next)) {
                     matched = true;
                     break;

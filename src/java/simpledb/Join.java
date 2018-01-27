@@ -12,6 +12,8 @@ public class Join extends Operator {
     private OpIterator child1;
     private OpIterator child2;
     private JoinPredicate pred;
+    private Tuple currChild1Tuple;
+    private Tuple currChild2Tuple;
     /**
      * Constructor. Accepts two children to join and the predicate to join them
      * on
@@ -28,6 +30,8 @@ public class Join extends Operator {
         pred = p;
         this.child1 = child1;
         this.child2 = child2;
+        currChild1Tuple = null;
+        currChild2Tuple = null;
     }
 
     public JoinPredicate getJoinPredicate() {
@@ -105,7 +109,49 @@ public class Join extends Operator {
      */
     protected Tuple fetchNext() throws TransactionAbortedException, DbException {
         // some code goes here
-        return null;
+
+        if(currChild1Tuple == null){
+            child1.rewind();
+            currChild1Tuple = child1.next();
+        }
+
+        if(currChild2Tuple == null){
+            child2.rewind();
+            currChild2Tuple = child2.next();
+        }
+
+        while(!pred.filter(currChild1Tuple, currChild2Tuple))
+            updateCurrTuples();
+
+        // find the matching tuple pair!
+        TupleDesc mergedDesc = TupleDesc.merge(currChild1Tuple.getTupleDesc(), currChild2Tuple.getTupleDesc());
+        Tuple t = new Tuple(mergedDesc);
+        // set fields
+        int i;
+        for(i = 0; i < currChild1Tuple.getTupleDesc().numFields(); i++){
+            t.setField(i, currChild1Tuple.getField(i));
+        }
+        for(int j = 0; j < currChild2Tuple.getTupleDesc().numFields(); j++){
+            t.setField(i, currChild2Tuple.getField(j));
+            i++;
+        }
+        updateCurrTuples();
+        return t;
+    }
+
+    private void updateCurrTuples() throws TransactionAbortedException, DbException {
+        if(child2.hasNext()){
+            currChild2Tuple = child2.next();
+            return;
+        }
+        if(!child1.hasNext()) { // nested iteration is over
+            currChild1Tuple = null;
+            currChild2Tuple = null;
+            return;
+        }
+        currChild1Tuple = child1.next();
+        child2.rewind();
+        currChild2Tuple = child2.next();
     }
 
     @Override
@@ -120,6 +166,8 @@ public class Join extends Operator {
     @Override
     public void setChildren(OpIterator[] children) {
         // some code goes here
+        assert children.length == 2;
+        child1 = children[0];
+        child2 = children[1];
     }
-
 }
