@@ -135,6 +135,7 @@ public class IntegerAggregator implements Aggregator {
 
         int aggFieldVal;
         Tuple updateTuple;
+        int mergedTupleCnt;
         switch (op) {
             case MAX:
                 aggFieldVal = Math.max(anotherTupleAggFieldInt, currTupleAggFieldInt);
@@ -143,7 +144,12 @@ public class IntegerAggregator implements Aggregator {
                 break;
 
             case MIN:
-                aggFieldVal = Math.min(anotherTupleAggFieldInt, currTupleAggFieldInt);
+                mergedTupleCnt = (gbfield == NO_GROUPING ? noGbCnt: groupByFieldCnt.get(key));
+                if(mergedTupleCnt == 0)
+                    aggFieldVal = anotherTupleAggFieldInt;
+                else
+                    aggFieldVal = Math.min(anotherTupleAggFieldInt, currTupleAggFieldInt);
+
                 updateTuple = (gbfield == NO_GROUPING ? noGbRes : groups.get(key));
                 setTupleFieldInt(updateTuple, aggFieldVal);
                 break;
@@ -155,19 +161,20 @@ public class IntegerAggregator implements Aggregator {
                 break;
 
             case AVG:
-                int mergedTupleCnt = (gbfield == NO_GROUPING ? noGbCnt: groupByFieldCnt.get(key));
+                mergedTupleCnt = (gbfield == NO_GROUPING ? noGbCnt: groupByFieldCnt.get(key));
                 aggFieldVal = (currTupleAggFieldInt * mergedTupleCnt + anotherTupleAggFieldInt) / (mergedTupleCnt + 1);
                 updateTuple = (gbfield == NO_GROUPING ? noGbRes : groups.get(key));
                 setTupleFieldInt(updateTuple, aggFieldVal);
-                if(gbfield == NO_GROUPING)
-                    noGbCnt++;
-                else
-                    groupByFieldCnt.put(key, groupByFieldCnt.get(key) + 1);
-
                 break;
 
             default:
                 break;
+        }
+        if(op == Op.MIN || op == Op.AVG) {
+            if (gbfield == NO_GROUPING)
+                noGbCnt++;
+            else
+                groupByFieldCnt.put(key, groupByFieldCnt.get(key) + 1);
         }
     }
 
