@@ -18,6 +18,7 @@ public class Aggregate extends Operator {
     private int gfield;
     private Aggregator.Op aop;
     private TupleDesc resDesc;
+    private DbLogger logger = new DbLogger(getClass().getName(), getClass().getName() + ".log", true);
     /**
      * Constructor.
      * 
@@ -48,18 +49,6 @@ public class Aggregate extends Operator {
         else
             agg = new IntegerAggregator(gfield, groupByFieldType, afield, aop);
 
-        // merge all tuple that can be read from the child OpIterator to the aggregator
-        try {
-            child.open();
-            while(child.hasNext())
-                agg.mergeTupleIntoGroup(child.next());
-
-        }catch (DbException | TransactionAbortedException e){
-            System.out.println("Oops...");
-            e.printStackTrace();
-            System.exit(1);
-        }
-
         this.afield = afield;
         this.gfield = gfield;
         this.chilOpIter = child;
@@ -86,6 +75,8 @@ public class Aggregate extends Operator {
             names[1] = aggFieldName;
         }
         resDesc = new TupleDesc(types, names);
+        logger.log("Aggregate tuple description: " + resDesc.toString());
+        mergeAllTupsToAggregator(); // aggOpIter is set after this function
     }
 
     private void mergeAllTupsToAggregator(){
@@ -155,7 +146,6 @@ public class Aggregate extends Operator {
     public void open() throws NoSuchElementException, DbException,
 	    TransactionAbortedException {
 	    // some code goes here
-        mergeAllTupsToAggregator();
         aggOpIter.open();
         super.open();
     }
@@ -171,7 +161,10 @@ public class Aggregate extends Operator {
 	    // some code goes here
         if(!aggOpIter.hasNext())
             return null;
-	    return aggOpIter.next();
+        Tuple ret = aggOpIter.next();
+        logger.log("In fetchNext()");
+        logger.log(ret.toString());
+	    return ret;
     }
 
     public void rewind() throws DbException, TransactionAbortedException {
