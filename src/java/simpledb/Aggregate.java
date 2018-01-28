@@ -17,6 +17,7 @@ public class Aggregate extends Operator {
     private int afield;
     private int gfield;
     private Aggregator.Op aop;
+    private TupleDesc resDesc;
     /**
      * Constructor.
      * 
@@ -65,6 +66,10 @@ public class Aggregate extends Operator {
 //        aggOpIter = agg.iterator();
         aggOpIter = null;
         this.aop = aop;
+
+        if(gfield == Aggregator.NO_GROUPING){
+
+        }
     }
 
     private void mergeAllTupsToAggregator(){
