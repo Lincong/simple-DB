@@ -15,6 +15,8 @@ public class StringAggregator implements Aggregator {
     private Tuple noGbRes;
     private Aggregator.Op op;
     private boolean isDescSet;
+    // for debug
+    private DbLogger logger = new DbLogger(getClass().getName(), getClass().getName() + ".log", true);
     /**
      * Aggregate constructor
      * @param gbfield the 0-based index of the group-by field in the tuple, or NO_GROUPING if there is no grouping
@@ -36,22 +38,22 @@ public class StringAggregator implements Aggregator {
 
     }
 
-    private Tuple getZeroCountTuple(){
+    private Tuple getZeroCountTuple(Tuple tup){
         Tuple t = new Tuple(resDesc);
+        logger.log("In getZeroCountTuple()");
         Field zeroCounterField = new IntField(0);
-        if(gbfield == NO_GROUPING)
+        if(gbfield == NO_GROUPING) {
             t.setField(0, zeroCounterField);
-        else // if it is group-by, the first field in the tuple is the group by field and the second
+        } else { // if it is group-by, the first field in the tuple is the group by field and the second
             t.setField(1, zeroCounterField);
-
+            Field groupByField = new StringField(tup.getField(gbfield).toString(), Type.STRING_LEN);
+            t.setField(0, groupByField);
+        }
         return t;
     }
 
     private void incTupleCnt(Tuple tup){
-        int fieldIdx = 0;
-        if(gbfield != NO_GROUPING){
-            fieldIdx = 1;
-        }
+        int fieldIdx = (gbfield == NO_GROUPING ? 0 : 1);
         int currCnt = ((IntField) tup.getField(fieldIdx)).getValue();
         currCnt++;
         Field updatedCounterField = new IntField(currCnt);
@@ -71,19 +73,20 @@ public class StringAggregator implements Aggregator {
             tdTypes[0] = Type.INT_TYPE;
             tdNames[0] = afieldName;
             resDesc = new TupleDesc(tdTypes, tdNames);
-            noGbRes = getZeroCountTuple();
+            noGbRes = getZeroCountTuple(tup);
 
         } else {
             tdTypes = new Type[2];
             tdNames = new String[2];
             tdTypes[0] = gbfieldtype;
             tdTypes[1] = Type.INT_TYPE;
-            tdNames[0] = tup.getField(gbfield).toString(); // set group-by field name
+            tdNames[0] = tup.getTupleDesc().getFieldName(gbfield); // tup.getField(gbfield).toString(); // set group-by field name
             tdNames[1] = afieldName;
 
             resDesc = new TupleDesc(tdTypes, tdNames);
             groups = new HashMap<Object, Tuple>();
         }
+        logger.log("Result Tuple description: " + resDesc.toString());
     }
 
     /**
@@ -115,8 +118,13 @@ public class StringAggregator implements Aggregator {
             incTupleCnt(groups.get(key));
 
         }else{
-            Tuple t = getZeroCountTuple();
+            Tuple t = getZeroCountTuple(tup);
+
+            logger.log("before incTupleCnt");
+            logger.log(t.toString());
+            logger.log("end");
             incTupleCnt(t);
+            logger.log("put tuple: " + t.toString());
             groups.put(key, t);
         }
     }
@@ -131,17 +139,19 @@ public class StringAggregator implements Aggregator {
      */
     public OpIterator iterator() {
         // some code goes here
-//        throw new UnsupportedOperationException("please implement me for lab2");
         List<Tuple> tups = new LinkedList<>();
         if(gbfield == NO_GROUPING){
             tups.add(noGbRes);
-
+            logger.log("1");
         }else{
+            logger.log("2");
             for(Object key : groups.keySet())
                 tups.add(groups.get(key));
         }
-//        OpIterator ret = new TupleIterator(resDesc, tups);
+        logger.log("Tuples in the iterable:");
+        for(Tuple t : tups) {
+            logger.log(t.toString());
+        }
         return new TupleIterator(resDesc, tups);
     }
-
 }
