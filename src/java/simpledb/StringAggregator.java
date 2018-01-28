@@ -1,5 +1,5 @@
 package simpledb;
-
+import java.util.*;
 /**
  * Knows how to compute some aggregate over a set of StringFields.
  */
@@ -10,7 +10,9 @@ public class StringAggregator implements Aggregator {
     private int gbfield;
     private Type gbfieldtype;
     private int afield;
-    private Op what;
+    private Map<Object, Tuple> groups;
+    private TupleDesc resDesc;
+    private Tuple noGbRes;
     /**
      * Aggregate constructor
      * @param gbfield the 0-based index of the group-by field in the tuple, or NO_GROUPING if there is no grouping
@@ -27,7 +29,27 @@ public class StringAggregator implements Aggregator {
         this.gbfield = gbfield;
         this.gbfieldtype = gbfieldtype;
         this.afield = afield;
-        this.what = what;
+        // create the schema (description) for the tuple
+        Type[] tdTypes;
+        String[] tdNames;
+        if (gbfield == NO_GROUPING){
+            assert gbfieldtype == null;
+            tdTypes = new Type[1];
+            tdNames = new String[1];
+            tdTypes[0] = Type.INT_TYPE;
+            tdNames[0] = what.toString();
+            TupleDesc resDesc = new TupleDesc(tdTypes, tdNames);
+            noGbRes = new Tuple(resDesc);
+            noGbRes.setField(0, );
+
+        } else {
+            tdTypes = new Type[2];
+            tdNames = new String[2];
+            tdTypes[0] = gbfieldtype;
+            TupleDesc resDesc = new TupleDesc(tdTypes, tdNames);
+            groups = new HashMap<Object, Tuple>();
+
+        }
     }
 
     /**
@@ -36,6 +58,9 @@ public class StringAggregator implements Aggregator {
      */
     public void mergeTupleIntoGroup(Tuple tup) {
         // some code goes here
+        if(gbfield == NO_GROUPING){
+            int currCnt = noGbRes.
+        }
     }
 
     /**
