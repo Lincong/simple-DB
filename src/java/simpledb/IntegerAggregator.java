@@ -13,9 +13,11 @@ public class IntegerAggregator implements Aggregator {
     private Aggregator.Op op;
     private boolean isDescSet;
     private Tuple noGbRes;
+    private int noGbCnt;
     private Map<Object, Tuple> groups;
+    private Map<Object, Integer> groupByFieldCnt;
     private TupleDesc resDesc;
-    private int mergedTupleCnt;
+    private DbLogger logger = new DbLogger(getClass().getName(), getClass().getName() + ".log", true);
     /**
      * Aggregate constructor
      * 
@@ -38,7 +40,6 @@ public class IntegerAggregator implements Aggregator {
         this.afield = afield;
         op = what;
         isDescSet = false;
-        mergedTupleCnt = 0;
     }
 
     private Tuple getZeroCountTuple(Tuple tup){
@@ -73,6 +74,7 @@ public class IntegerAggregator implements Aggregator {
             tdNames[0] = afieldName;
             resDesc = new TupleDesc(tdTypes, tdNames);
             noGbRes = getZeroCountTuple(tup);
+            noGbCnt = 0;
 
         } else {
             tdTypes = new Type[2];
@@ -83,7 +85,8 @@ public class IntegerAggregator implements Aggregator {
             tdNames[1] = afieldName;
 
             resDesc = new TupleDesc(tdTypes, tdNames);
-            groups = new HashMap<Object, Tuple>();
+            groups = new HashMap<>();
+            groupByFieldCnt = new HashMap<>();
         }
     }
 
@@ -104,6 +107,9 @@ public class IntegerAggregator implements Aggregator {
             setResTupleDesc(tup);
             isDescSet = true;
         }
+
+        logger.log("-----Op: " + op.toString());
+        logger.log("Tuple to merge: " + tup.toString());
         int anotherTupleAggFieldInt = getTupleAggFieldInt(tup);
         int currTupleAggFieldInt;
         Object key = null;
@@ -117,6 +123,7 @@ public class IntegerAggregator implements Aggregator {
             if(!groups.containsKey(key)){
                 Tuple t = getZeroCountTuple(tup);
                 groups.put(key, t);
+                groupByFieldCnt.put(key, 0);
                 currTupleAggFieldInt = 0;
 
             } else {
@@ -148,15 +155,20 @@ public class IntegerAggregator implements Aggregator {
                 break;
 
             case AVG:
+                int mergedTupleCnt = (gbfield == NO_GROUPING ? noGbCnt: groupByFieldCnt.get(key));
                 aggFieldVal = (currTupleAggFieldInt * mergedTupleCnt + anotherTupleAggFieldInt) / (mergedTupleCnt + 1);
                 updateTuple = (gbfield == NO_GROUPING ? noGbRes : groups.get(key));
                 setTupleFieldInt(updateTuple, aggFieldVal);
+                if(gbfield == NO_GROUPING)
+                    noGbCnt++;
+                else
+                    groupByFieldCnt.put(key, groupByFieldCnt.get(key) + 1);
+
                 break;
 
             default:
                 break;
         }
-        mergedTupleCnt++;
     }
 
     /**
@@ -176,8 +188,10 @@ public class IntegerAggregator implements Aggregator {
             for(Object key : groups.keySet())
                 tups.add(groups.get(key));
         }
-        // logger.log("Tuples in the iterable:");
-        // logger.log(tups.toString());
+        logger.log("-----Op: " + op.toString());
+        logger.log("Tuples in the iterable:");
+        logger.log(tups.toString());
+        logger.log("\n");
         return new TupleIterator(resDesc, tups);
     }
 }
