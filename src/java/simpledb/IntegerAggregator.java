@@ -17,7 +17,7 @@ public class IntegerAggregator implements Aggregator {
     private Map<Object, Tuple> groups;
     private Map<Object, Integer> groupByFieldCnt;
     private TupleDesc resDesc;
-    private DbLogger logger = new DbLogger(getClass().getName(), getClass().getName() + ".log", true);
+    private DbLogger logger = new DbLogger(getClass().getName(), getClass().getName() + ".log",false);
     /**
      * Aggregate constructor
      * 

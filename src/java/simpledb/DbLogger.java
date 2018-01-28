@@ -19,6 +19,7 @@ public class DbLogger {
     private FileWriter aWriter;
 
     DbLogger(String className, String path, boolean on){
+        if(!on)return;
         this.on = on;
         this.className = className;
         String logFilePath = "./src/log/" + path;
