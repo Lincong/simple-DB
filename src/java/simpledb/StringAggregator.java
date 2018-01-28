@@ -16,7 +16,7 @@ public class StringAggregator implements Aggregator {
     private Aggregator.Op op;
     private boolean isDescSet;
     // for debug
-    private DbLogger logger = new DbLogger(getClass().getName(), getClass().getName() + ".log", true);
+    private DbLogger logger = new DbLogger(getClass().getName(), getClass().getName() + ".log", false);
     /**
      * Aggregate constructor
      * @param gbfield the 0-based index of the group-by field in the tuple, or NO_GROUPING if there is no grouping

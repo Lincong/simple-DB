@@ -18,7 +18,7 @@ public class Aggregate extends Operator {
     private int gfield;
     private Aggregator.Op aop;
     private TupleDesc resDesc;
-    private DbLogger logger = new DbLogger(getClass().getName(), getClass().getName() + ".log", true);
+    private DbLogger logger = new DbLogger(getClass().getName(), getClass().getName() + ".log", false);
     /**
      * Constructor.
      * 
@@ -52,7 +52,6 @@ public class Aggregate extends Operator {
         this.afield = afield;
         this.gfield = gfield;
         this.chilOpIter = child;
-//        aggOpIter = agg.iterator();
         aggOpIter = null;
         this.aop = aop;
         // create tuple description of the current aggregate

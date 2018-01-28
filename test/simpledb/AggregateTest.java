@@ -85,30 +85,30 @@ public class AggregateTest extends SimpleDbTestBase {
   /**
    * Unit test for Aggregate.getTupleDesc()
    */
-//  @Test public void getTupleDesc() {
-//    Aggregate op = new Aggregate(scan1, 0, 0,
-//        Aggregator.Op.MIN);
-//    TupleDesc expected = Utility.getTupleDesc(2);
-//    TupleDesc actual = op.getTupleDesc();
-//    assertEquals(expected, actual);
-//  }
-//
-//  /**
-//   * Unit test for Aggregate.rewind()
-//   */
-//  @Test public void rewind() throws Exception {
-//    Aggregate op = new Aggregate(scan1, 1, 0,
-//        Aggregator.Op.MIN);
-//    op.open();
-//    while (op.hasNext()) {
-//      assertNotNull(op.next());
-//    }
-//    assertTrue(TestUtil.checkExhausted(op));
-//
-//    op.rewind();
-//    min.open();
-//    TestUtil.matchAllTuples(min, op);
-//  }
+  @Test public void getTupleDesc() {
+    Aggregate op = new Aggregate(scan1, 0, 0,
+        Aggregator.Op.MIN);
+    TupleDesc expected = Utility.getTupleDesc(2);
+    TupleDesc actual = op.getTupleDesc();
+    assertEquals(expected, actual);
+  }
+
+  /**
+   * Unit test for Aggregate.rewind()
+   */
+  @Test public void rewind() throws Exception {
+    Aggregate op = new Aggregate(scan1, 1, 0,
+        Aggregator.Op.MIN);
+    op.open();
+    while (op.hasNext()) {
+      assertNotNull(op.next());
+    }
+    assertTrue(TestUtil.checkExhausted(op));
+
+    op.rewind();
+    min.open();
+    TestUtil.matchAllTuples(min, op);
+  }
 
   /**
    * Unit test for Aggregate.getNext() using a count aggregate with string types
@@ -124,57 +124,57 @@ public class AggregateTest extends SimpleDbTestBase {
   /**
    * Unit test for Aggregate.getNext() using a count aggregate with string types
    */
-//  @Test public void sumStringGroupBy() throws Exception {
-//    Aggregate op = new Aggregate(scan3, 1, 0,
-//        Aggregator.Op.SUM);
-//    op.open();
-//    sumstring.open();
-//    TestUtil.matchAllTuples(sumstring, op);
-//  }
-//
-//  /**
-//   * Unit test for Aggregate.getNext() using a sum aggregate
-//   */
-//  @Test public void sumAggregate() throws Exception {
-//    Aggregate op = new Aggregate(scan1, 1, 0,
-//        Aggregator.Op.SUM);
-//    op.open();
-//    sum.open();
-//    TestUtil.matchAllTuples(sum, op);
-//  }
-//
-//  /**
-//   * Unit test for Aggregate.getNext() using an avg aggregate
-//   */
-//  @Test public void avgAggregate() throws Exception {
-//    Aggregate op = new Aggregate(scan1, 1, 0,
-//       Aggregator.Op.AVG);
-//    op.open();
-//    avg.open();
-//    TestUtil.matchAllTuples(avg, op);
-//  }
-//
-//  /**
-//   * Unit test for Aggregate.getNext() using a max aggregate
-//   */
-//  @Test public void maxAggregate() throws Exception {
-//    Aggregate op = new Aggregate(scan1, 1, 0,
-//        Aggregator.Op.MAX);
-//    op.open();
-//    max.open();
-//    TestUtil.matchAllTuples(max, op);
-//  }
-//
-//  /**
-//   * Unit test for Aggregate.getNext() using a min aggregate
-//   */
-//  @Test public void minAggregate() throws Exception {
-//    Aggregate op = new Aggregate(scan1, 1, 0,
-//       Aggregator.Op.MIN);
-//    op.open();
-//    min.open();
-//    TestUtil.matchAllTuples(min, op);
-//  }
+  @Test public void sumStringGroupBy() throws Exception {
+    Aggregate op = new Aggregate(scan3, 1, 0,
+        Aggregator.Op.SUM);
+    op.open();
+    sumstring.open();
+    TestUtil.matchAllTuples(sumstring, op);
+  }
+
+  /**
+   * Unit test for Aggregate.getNext() using a sum aggregate
+   */
+  @Test public void sumAggregate() throws Exception {
+    Aggregate op = new Aggregate(scan1, 1, 0,
+        Aggregator.Op.SUM);
+    op.open();
+    sum.open();
+    TestUtil.matchAllTuples(sum, op);
+  }
+
+  /**
+   * Unit test for Aggregate.getNext() using an avg aggregate
+   */
+  @Test public void avgAggregate() throws Exception {
+    Aggregate op = new Aggregate(scan1, 1, 0,
+       Aggregator.Op.AVG);
+    op.open();
+    avg.open();
+    TestUtil.matchAllTuples(avg, op);
+  }
+
+  /**
+   * Unit test for Aggregate.getNext() using a max aggregate
+   */
+  @Test public void maxAggregate() throws Exception {
+    Aggregate op = new Aggregate(scan1, 1, 0,
+        Aggregator.Op.MAX);
+    op.open();
+    max.open();
+    TestUtil.matchAllTuples(max, op);
+  }
+
+  /**
+   * Unit test for Aggregate.getNext() using a min aggregate
+   */
+  @Test public void minAggregate() throws Exception {
+    Aggregate op = new Aggregate(scan1, 1, 0,
+       Aggregator.Op.MIN);
+    op.open();
+    min.open();
+    TestUtil.matchAllTuples(min, op);
+  }
 
   /**
    * JUnit suite target
