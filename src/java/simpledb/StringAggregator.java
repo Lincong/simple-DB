@@ -13,6 +13,8 @@ public class StringAggregator implements Aggregator {
     private Map<Object, Tuple> groups;
     private TupleDesc resDesc;
     private Tuple noGbRes;
+    private Aggregator.Op op;
+    private boolean isDescSet;
     /**
      * Aggregate constructor
      * @param gbfield the 0-based index of the group-by field in the tuple, or NO_GROUPING if there is no grouping
@@ -29,26 +31,58 @@ public class StringAggregator implements Aggregator {
         this.gbfield = gbfield;
         this.gbfieldtype = gbfieldtype;
         this.afield = afield;
+        op = what;
+        isDescSet = false;
+
+    }
+
+    private Tuple getZeroCountTuple(){
+        Tuple t = new Tuple(resDesc);
+        Field zeroCounterField = new IntField(0);
+        if(gbfield == NO_GROUPING)
+            t.setField(0, zeroCounterField);
+        else // if it is group-by, the first field in the tuple is the group by field and the second
+            t.setField(1, zeroCounterField);
+
+        return t;
+    }
+
+    private void incTupleCnt(Tuple tup){
+        int fieldIdx = 0;
+        if(gbfield != NO_GROUPING){
+            fieldIdx = 1;
+        }
+        int currCnt = ((IntField) tup.getField(fieldIdx)).getValue();
+        currCnt++;
+        Field updatedCounterField = new IntField(currCnt);
+        tup.setField(fieldIdx, updatedCounterField);
+    }
+
+    private void setResTupleDesc(Tuple tup){
         // create the schema (description) for the tuple
         Type[] tdTypes;
         String[] tdNames;
+        String afieldName = op.toString() + "(" + tup.getField(afield).toString() + ")";
+
         if (gbfield == NO_GROUPING){
             assert gbfieldtype == null;
             tdTypes = new Type[1];
             tdNames = new String[1];
             tdTypes[0] = Type.INT_TYPE;
-            tdNames[0] = what.toString();
-            TupleDesc resDesc = new TupleDesc(tdTypes, tdNames);
-            noGbRes = new Tuple(resDesc);
-            noGbRes.setField(0, );
+            tdNames[0] = afieldName;
+            resDesc = new TupleDesc(tdTypes, tdNames);
+            noGbRes = getZeroCountTuple();
 
         } else {
             tdTypes = new Type[2];
             tdNames = new String[2];
             tdTypes[0] = gbfieldtype;
-            TupleDesc resDesc = new TupleDesc(tdTypes, tdNames);
-            groups = new HashMap<Object, Tuple>();
+            tdTypes[1] = Type.INT_TYPE;
+            tdNames[0] = tup.getField(gbfield).toString(); // set group-by field name
+            tdNames[1] = afieldName;
 
+            resDesc = new TupleDesc(tdTypes, tdNames);
+            groups = new HashMap<Object, Tuple>();
         }
     }
 
@@ -58,8 +92,32 @@ public class StringAggregator implements Aggregator {
      */
     public void mergeTupleIntoGroup(Tuple tup) {
         // some code goes here
+        if(!isDescSet){
+            setResTupleDesc(tup);
+            isDescSet = true;
+        }
+
         if(gbfield == NO_GROUPING){
-            int currCnt = noGbRes.
+            incTupleCnt(noGbRes);
+            return;
+        }
+
+        // grouping-by operation
+        Field groupByField = tup.getField(gbfield);
+        Object key;
+        if(gbfieldtype == Type.INT_TYPE)
+            key = ((IntField) groupByField).getValue();
+
+        else // STRING_TYPE
+            key = ((StringField) groupByField).getValue();
+
+        if(groups.containsKey(key)){
+            incTupleCnt(groups.get(key));
+
+        }else{
+            Tuple t = getZeroCountTuple();
+            incTupleCnt(t);
+            groups.put(key, t);
         }
     }
 
@@ -73,7 +131,17 @@ public class StringAggregator implements Aggregator {
      */
     public OpIterator iterator() {
         // some code goes here
-        throw new UnsupportedOperationException("please implement me for lab2");
+//        throw new UnsupportedOperationException("please implement me for lab2");
+        List<Tuple> tups = new LinkedList<>();
+        if(gbfield == NO_GROUPING){
+            tups.add(noGbRes);
+
+        }else{
+            for(Object key : groups.keySet())
+                tups.add(groups.get(key));
+        }
+//        OpIterator ret = new TupleIterator(resDesc, tups);
+        return new TupleIterator(resDesc, tups);
     }
 
 }
