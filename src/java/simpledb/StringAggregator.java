@@ -16,7 +16,7 @@ public class StringAggregator implements Aggregator {
     private Aggregator.Op op;
     private boolean isDescSet;
     // for debug
-    private DbLogger logger = new DbLogger(getClass().getName(), getClass().getName() + ".log", true);
+    private DbLogger logger = new DbLogger(getClass().getName(), getClass().getName() + ".log", false);
     /**
      * Aggregate constructor
      * @param gbfield the 0-based index of the group-by field in the tuple, or NO_GROUPING if there is no grouping
@@ -40,13 +40,11 @@ public class StringAggregator implements Aggregator {
 
     private Tuple getZeroCountTuple(Tuple tup){
         Tuple t = new Tuple(resDesc);
-        logger.log("In getZeroCountTuple()");
         Field zeroCounterField = new IntField(0);
         if(gbfield == NO_GROUPING) {
             t.setField(0, zeroCounterField);
         } else { // if it is group-by, the first field in the tuple is the group by field and the second
             t.setField(1, zeroCounterField);
-//            Field groupByField = new StringField(tup.getField(gbfield).toString(), Type.STRING_LEN);
             t.setField(0, tup.getField(gbfield));
         }
         return t;
@@ -86,7 +84,6 @@ public class StringAggregator implements Aggregator {
             resDesc = new TupleDesc(tdTypes, tdNames);
             groups = new HashMap<Object, Tuple>();
         }
-        logger.log("Result Tuple description: " + resDesc.toString());
     }
 
     /**
@@ -119,12 +116,7 @@ public class StringAggregator implements Aggregator {
 
         }else{
             Tuple t = getZeroCountTuple(tup);
-
-            logger.log("before incTupleCnt");
-            logger.log(t.toString());
-            logger.log("end");
             incTupleCnt(t);
-            logger.log("put tuple: " + t.toString());
             groups.put(key, t);
         }
     }
@@ -142,16 +134,12 @@ public class StringAggregator implements Aggregator {
         List<Tuple> tups = new LinkedList<>();
         if(gbfield == NO_GROUPING){
             tups.add(noGbRes);
-            logger.log("1");
         }else{
-            logger.log("2");
             for(Object key : groups.keySet())
                 tups.add(groups.get(key));
         }
         logger.log("Tuples in the iterable:");
-        for(Tuple t : tups) {
-            logger.log(t.toString());
-        }
+        logger.log(tups.toString());
         return new TupleIterator(resDesc, tups);
     }
 }
