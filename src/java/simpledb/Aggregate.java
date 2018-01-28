@@ -66,10 +66,26 @@ public class Aggregate extends Operator {
 //        aggOpIter = agg.iterator();
         aggOpIter = null;
         this.aop = aop;
-
+        // create tuple description of the current aggregate
+        TupleDesc childDesc = child.getTupleDesc();
+        Type [] types;
+        String [] names;
+        String aggFieldName = aop.toString() + "(" + childDesc.getFieldName(afield) + ")";
         if(gfield == Aggregator.NO_GROUPING){
+            types = new Type[1];
+            names = new String[1];
+            types[0] = Type.INT_TYPE;
+            names[0] = aggFieldName;
 
+        } else {
+            types = new Type[2];
+            names = new String[2];
+            types[0] = groupByFieldType;
+            types[1] =  Type.INT_TYPE;
+            names[0] = childDesc.getFieldName(gfield);
+            names[1] = aggFieldName;
         }
+        resDesc = new TupleDesc(types, names);
     }
 
     private void mergeAllTupsToAggregator(){
@@ -179,7 +195,7 @@ public class Aggregate extends Operator {
      */
     public TupleDesc getTupleDesc() {
 	    // some code goes here
-	    return aggOpIter.getTupleDesc();
+	    return resDesc;
     }
 
     public void close() {
