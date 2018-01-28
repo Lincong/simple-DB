@@ -46,8 +46,8 @@ public class StringAggregator implements Aggregator {
             t.setField(0, zeroCounterField);
         } else { // if it is group-by, the first field in the tuple is the group by field and the second
             t.setField(1, zeroCounterField);
-            Field groupByField = new StringField(tup.getField(gbfield).toString(), Type.STRING_LEN);
-            t.setField(0, groupByField);
+//            Field groupByField = new StringField(tup.getField(gbfield).toString(), Type.STRING_LEN);
+            t.setField(0, tup.getField(gbfield));
         }
         return t;
     }
