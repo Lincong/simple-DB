@@ -272,10 +272,6 @@ public class HeapPage implements Page {
      */
     public void insertTuple(Tuple t) throws DbException {
         // some code goes here
-        RecordId tupRecord = t.getRecordId();
-        if(pid.equals(tupRecord.getPageId()))
-            throw new DbException("Tuple to delete doesn't seem to be on this page");
-
         if(!t.getTupleDesc().equals(td))
             throw new DbException("Tuple description is mismatch.");
 
