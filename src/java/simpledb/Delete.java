@@ -13,6 +13,7 @@ public class Delete extends Operator {
     private TransactionId tid;
     private OpIterator child;
     private TupleDesc resDesc;
+    private boolean hasDeleted;
     /**
      * Constructor specifying the transaction that this delete belongs to as
      * well as the child to read from.
@@ -30,6 +31,7 @@ public class Delete extends Operator {
         String [] names = new String[1];
         types[0] = Type.INT_TYPE;
         resDesc= new TupleDesc(types, names);
+        hasDeleted = false; // not necessary
     }
 
     public TupleDesc getTupleDesc() {
@@ -41,6 +43,7 @@ public class Delete extends Operator {
         // some code goes here
         child.open();
         super.open();
+        hasDeleted = false;
     }
 
     public void close() {
@@ -66,6 +69,7 @@ public class Delete extends Operator {
      */
     protected Tuple fetchNext() throws TransactionAbortedException, DbException {
         // some code goes here
+        if(hasDeleted) return null;
         int cnt = 0;
         BufferPool bpool = Database.getBufferPool();
         while(child.hasNext()){
@@ -82,6 +86,7 @@ public class Delete extends Operator {
         Tuple ret = new Tuple(resDesc);
         Field dataField = new IntField(cnt);
         ret.setField(0, dataField);
+        hasDeleted = true;
         return ret;
     }
 
