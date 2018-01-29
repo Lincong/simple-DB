@@ -14,6 +14,7 @@ public class Insert extends Operator {
     private OpIterator child;
     private int tableID;
     private TupleDesc resDesc;
+    private boolean hasInserted;
     /**
      * Constructor.
      *
@@ -37,6 +38,7 @@ public class Insert extends Operator {
         String [] names = new String[1];
         types[0] = Type.INT_TYPE;
         resDesc= new TupleDesc(types, names);
+        hasInserted = false;
     }
 
     public TupleDesc getTupleDesc() {
@@ -48,6 +50,7 @@ public class Insert extends Operator {
         // some code goes here
         child.open();
         super.open();
+        hasInserted = false;
     }
 
     public void close() {
@@ -77,6 +80,7 @@ public class Insert extends Operator {
      */
     protected Tuple fetchNext() throws TransactionAbortedException, DbException {
         // some code goes here
+        if(hasInserted) return null;
         int cnt = 0;
         BufferPool bpool = Database.getBufferPool();
         while(child.hasNext()){
@@ -93,6 +97,7 @@ public class Insert extends Operator {
         Tuple ret = new Tuple(resDesc);
         Field dataField = new IntField(cnt);
         ret.setField(0, dataField);
+        hasInserted = true;
         return ret;
     }
 
