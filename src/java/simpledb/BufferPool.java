@@ -1,10 +1,11 @@
 package simpledb;
 
 import java.io.IOException;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.List;
 import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.LinkedHashMap;
 import java.util.NoSuchElementException;
 /**
  * BufferPool manages the reading and writing of pages into memory from
@@ -28,6 +29,33 @@ public class BufferPool {
     constructor instead. */
     public static final int DEFAULT_PAGES = 50;
 
+    class Pool{
+        private Map<Integer, Page> m;
+
+        Pool(int maxNumPages){
+            m = new LinkedHashMap<>(maxNumPages, 0.75f, true);
+        }
+
+        public void put(int k, Page v){
+            m.put(k, v);
+        }
+
+        public Page get(int k){
+            return m.get(k);
+        }
+
+        public void remove(int k){
+            m.remove(k);
+        }
+
+        public boolean containsKey(int k){
+            return m.containsKey(k);
+        }
+
+        public Set<Integer> keySet(){
+            return m.keySet();
+        }
+    }
 
 //    class LRUPool <T> {
 //        int remainingPairNum;
@@ -71,7 +99,8 @@ public class BufferPool {
 
     private int maxNumPages;
     private int remainingPairNum;
-    private Map<Integer, Page> m;
+//    private Map<Integer, Page> m;
+    private Pool m;
 
     private DbLogger logger = new DbLogger(getClass().getName(), getClass().getName() + ".log", false);
     /**
@@ -83,7 +112,8 @@ public class BufferPool {
         // some code goes here
         maxNumPages = numPages;
         remainingPairNum = maxNumPages;
-        m = new LinkedHashMap<>(remainingPairNum, 0.75f, true);
+//        m = new LinkedHashMap<>(remainingPairNum, 0.75f, true);
+        m = new Pool(remainingPairNum);
     }
 
     public Page getPage(int pageHashCode) {
@@ -96,8 +126,8 @@ public class BufferPool {
         logger.log("Trying to cache page: " + pageHashCode);
         if (this.remainingPairNum < 0)
             throw new DbException("Buffer pool is full!");
-        boolean hasKey = this.m.containsKey(pageHashCode);
-        this.m.put(pageHashCode, page);
+        boolean hasKey = m.containsKey(pageHashCode);
+        m.put(pageHashCode, page);
         if(!hasKey){
             logger.log("Page not in buffer pool");
             this.remainingPairNum--;
@@ -109,7 +139,7 @@ public class BufferPool {
         }
     }
 
-    public List<Page> getAllPages(){
+    public synchronized List<Page> getAllPages(){
         List<Page> allPages = new ArrayList<>();
         for(int key : m.keySet())
             allPages.add(m.get(key));
@@ -257,7 +287,7 @@ public class BufferPool {
      * @param tid the transaction deleting the tuple.
      * @param t the tuple to delete
      */
-    public  void deleteTuple(TransactionId tid, Tuple t)
+    public void deleteTuple(TransactionId tid, Tuple t)
         throws DbException, IOException, TransactionAbortedException {
         // some code goes here
         Page p =getPage(tid, t.getRecordId().getPageId(), Permissions.READ_WRITE);
