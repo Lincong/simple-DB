@@ -115,7 +115,7 @@ public class BufferPool {
      * @param pid the ID of the requested page
      * @param perm the requested permissions on the page
      */
-    public  Page getPage(TransactionId tid, PageId pid, Permissions perm)
+    public Page getPage(TransactionId tid, PageId pid, Permissions perm)
         throws TransactionAbortedException, DbException {
         // some code goes here
         Catalog catalog = Database.getCatalog();
@@ -205,6 +205,9 @@ public class BufferPool {
         throws DbException, IOException, TransactionAbortedException {
         // some code goes here
         // not necessary for lab1
+        Page p =getPage(tid, t.getRecordId().getPageId(), Permissions.READ_WRITE);
+        ((HeapPage) p).insertTuple(t);
+        p.markDirty(true, tid);
     }
 
     /**
@@ -224,6 +227,9 @@ public class BufferPool {
         throws DbException, IOException, TransactionAbortedException {
         // some code goes here
         // not necessary for lab1
+        Page p =getPage(tid, t.getRecordId().getPageId(), Permissions.READ_WRITE);
+        ((HeapPage) p).deleteTuple(t);
+        p.markDirty(true, tid);
     }
 
     /**
