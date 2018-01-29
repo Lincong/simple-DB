@@ -281,8 +281,13 @@ public class HeapPage implements Page {
         int slot = getNextEmptySlot();
         assert slot != -1;
         // set the record ID of the current tuple using the current page information
-        t.getRecordId().setPageId(getId());
-        t.getRecordId().setTupleNumber(slot);
+        if(t.getRecordId() == null){
+            RecordId rid = new RecordId(getId(), slot);
+            t.setRecordId(rid);
+        }else {
+            t.getRecordId().setPageId(getId());
+            t.getRecordId().setTupleNumber(slot);
+        }
         markSlotUsed(slot, true);
         tuples[slot] = t;
     }

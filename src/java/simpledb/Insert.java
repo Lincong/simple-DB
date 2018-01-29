@@ -13,6 +13,7 @@ public class Insert extends Operator {
     private TransactionId tid;
     private OpIterator child;
     private int tableID;
+    private TupleDesc resDesc;
     /**
      * Constructor.
      *
@@ -32,11 +33,15 @@ public class Insert extends Operator {
         tid = t;
         this.child = child;
         tableID = tableId;
+        Type [] types = new Type[1];
+        String [] names = new String[1];
+        types[0] = Type.INT_TYPE;
+        resDesc= new TupleDesc(types, names);
     }
 
     public TupleDesc getTupleDesc() {
         // some code goes here
-        return child.getTupleDesc();
+        return resDesc;
     }
 
     public void open() throws DbException, TransactionAbortedException {
@@ -84,11 +89,8 @@ public class Insert extends Operator {
             }
             cnt++;
         }
-        Type [] t = new Type[1];
-        String [] names = new String[1];
-        t[0] = Type.INT_TYPE;
-        TupleDesc td = new TupleDesc(t, names);
-        Tuple ret = new Tuple(td);
+
+        Tuple ret = new Tuple(resDesc);
         Field dataField = new IntField(cnt);
         ret.setField(0, dataField);
         return ret;
