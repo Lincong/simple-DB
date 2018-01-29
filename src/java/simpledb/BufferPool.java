@@ -3,6 +3,7 @@ package simpledb;
 import java.io.IOException;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.List;
 import java.util.ArrayList;
 import java.util.NoSuchElementException;
 /**
@@ -28,52 +29,50 @@ public class BufferPool {
     public static final int DEFAULT_PAGES = 50;
 
 
-    class LRUPool <T> {
-        int remainingPairNum;
-        Map<Integer, T> m;
-
-        public LRUPool(int capacity) {
-            this.remainingPairNum = capacity;
-            this.m = new LinkedHashMap<>(remainingPairNum, 0.75f, true);
-        }
-
-        public T getPage(int pageHashCode) {
-            if(!m.containsKey(pageHashCode)) return null;
-            return m.get(pageHashCode);
-        }
-
-        public void putPage(int pageHashCode, T page) throws DbException {
-            logger.log("In putPage, remaining capacity is: " + this.remainingPairNum);
-            logger.log("Trying to cache page: " + pageHashCode);
-            if (this.remainingPairNum < 0)
-                throw new DbException("Buffer pool is full!");
-            boolean hasKey = this.m.containsKey(pageHashCode);
-            this.m.put(pageHashCode, page);
-            if(!hasKey){
-                logger.log("Page not in buffer pool");
-                this.remainingPairNum--;
-                if (this.remainingPairNum < 0) {
-                    // TODO: eviction
-                }
-
-                while (this.remainingPairNum < 0) {
-                    logger.log("Remove page from buffer pool");
-                    int k = this.m.keySet().iterator().next();
-                    evictPage(this.m.get(k)); // remove the page from the buffer pool
-                    this.m.remove(k);
-                    this.remainingPairNum++;
-                }
-            }
-        }
-
-        private void evictPage(T page) {
-
-        }
-    }
+//    class LRUPool <T> {
+//        int remainingPairNum;
+//        Map<Integer, T> m;
+//
+//        public LRUPool(int capacity) {
+//            this.remainingPairNum = capacity;
+//            this.m = new LinkedHashMap<>(remainingPairNum, 0.75f, true);
+//        }
+//
+//        public T getPage(int pageHashCode) {
+//            if(!m.containsKey(pageHashCode)) return null;
+//            return m.get(pageHashCode);
+//        }
+//
+//        public void putPage(int pageHashCode, T page) throws DbException {
+//            logger.log("In putPage, remaining capacity is: " + this.remainingPairNum);
+//            logger.log("Trying to cache page: " + pageHashCode);
+//            if (this.remainingPairNum < 0)
+//                throw new DbException("Buffer pool is full!");
+//            boolean hasKey = this.m.containsKey(pageHashCode);
+//            this.m.put(pageHashCode, page);
+//            if(!hasKey){
+//                logger.log("Page not in buffer pool");
+//                this.remainingPairNum--;
+//
+//                while (this.remainingPairNum < 0) {
+//                    logger.log("Remove page from buffer pool");
+//                    evictPage(); // remove the page from the buffer pool
+//                }
+//            }
+//        }
+//
+//        public List<T> getAllPages(){
+//            List<T> allPages = new ArrayList<>();
+//            for(int key : m.keySet())
+//                allPages.add(m.get(key));
+//            return allPages;
+//        }
+//    }
 
     private int maxNumPages;
-    private int currNumPages;
-    private LRUPool<HeapPage> pool;
+    private int remainingPairNum;
+    private Map<Integer, Page> m;
+
     private DbLogger logger = new DbLogger(getClass().getName(), getClass().getName() + ".log", false);
     /**
      * Creates a BufferPool that caches up to numPages pages.
@@ -83,9 +82,41 @@ public class BufferPool {
     public BufferPool(int numPages) {
         // some code goes here
         maxNumPages = numPages;
-        pool = new LRUPool<>(maxNumPages);
+        remainingPairNum = maxNumPages;
+        m = new LinkedHashMap<>(remainingPairNum, 0.75f, true);
     }
-    
+
+    public Page getPage(int pageHashCode) {
+        if(!m.containsKey(pageHashCode)) return null;
+        return m.get(pageHashCode);
+    }
+
+    public void putPage(int pageHashCode, Page page) throws DbException {
+        logger.log("In putPage, remaining capacity is: " + this.remainingPairNum);
+        logger.log("Trying to cache page: " + pageHashCode);
+        if (this.remainingPairNum < 0)
+            throw new DbException("Buffer pool is full!");
+        boolean hasKey = this.m.containsKey(pageHashCode);
+        this.m.put(pageHashCode, page);
+        if(!hasKey){
+            logger.log("Page not in buffer pool");
+            this.remainingPairNum--;
+
+            while (this.remainingPairNum < 0) {
+                logger.log("Remove page from buffer pool");
+                evictPage(); // remove the page from the buffer pool
+            }
+        }
+    }
+
+    public List<Page> getAllPages(){
+        List<Page> allPages = new ArrayList<>();
+        for(int key : m.keySet())
+            allPages.add(m.get(key));
+        return allPages;
+    }
+
+
     public static int getPageSize() {
       return pageSize;
     }
@@ -128,7 +159,7 @@ public class BufferPool {
             throw new DbException("Can not get DbFile for table with ID: " + pid.getTableId());
         }
         logger.log("----Try to read page in buffer pool: " + pid.hashCode() + "----");
-        HeapPage pg = pool.getPage(pid.hashCode()); // check if page is already in the pool
+        HeapPage pg = (HeapPage) getPage(pid.hashCode()); // check if page is already in the pool
         if(pg != null) {
             logger.log("Page in buffer pool!");
             return pg;
@@ -137,7 +168,7 @@ public class BufferPool {
         // read page from the disk
         pg = (HeapPage) dbFile.readPage(pid);
         // store the newly read page into the buffer pool
-        pool.putPage(pid.hashCode(), pg);
+        putPage(pid.hashCode(), pg);
         logger.log("----End of read page in buffer pool----");
         return pg;
     }
@@ -209,7 +240,7 @@ public class BufferPool {
         logger.log("modifiedPages size: " + modifiedPages.size());
         for (Page page : modifiedPages) {
             page.markDirty(true, tid);
-            pool.putPage(page.getId().hashCode(), (HeapPage) page);
+            putPage(page.getId().hashCode(), (HeapPage) page);
         }
     }
 
@@ -241,8 +272,8 @@ public class BufferPool {
      */
     public synchronized void flushAllPages() throws IOException {
         // some code goes here
-        // not necessary for lab1
-
+        for (Page page : getAllPages())
+            flushPage(page.getId());
     }
 
     /** Remove the specific page id from the buffer pool.
@@ -265,6 +296,14 @@ public class BufferPool {
     private synchronized  void flushPage(PageId pid) throws IOException {
         // some code goes here
         // not necessary for lab1
+        Page pageToFlush = getPage(pid.hashCode());
+        TransactionId dirtyTransactionId = pageToFlush.isDirty();
+        if (dirtyTransactionId != null)
+        {
+            HeapFile databaseFile = (HeapFile) Database.getCatalog().getDatabaseFile(pid.getTableId());
+            databaseFile.writePage(pageToFlush);
+            pageToFlush.markDirty(false, dirtyTransactionId);
+        }
     }
 
     /** Write all pages of the specified transaction to disk.
@@ -281,6 +320,16 @@ public class BufferPool {
     private synchronized  void evictPage() throws DbException {
         // some code goes here
         // not necessary for lab1
-    }
+        int k = m.keySet().iterator().next();
+        Page pageToEvict = m.get(k);
+        try{
+            flushPage(pageToEvict.getId());
+        }catch (IOException e){
+            e.printStackTrace();
+            throw new DbException("IO exception happens when trying to flush and evict a page to the disk");
+        }
 
+        m.remove(k);
+        remainingPairNum++;
+    }
 }
