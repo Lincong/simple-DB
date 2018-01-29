@@ -3,6 +3,7 @@ package simpledb;
 import java.io.IOException;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.ArrayList;
 import java.util.NoSuchElementException;
 /**
  * BufferPool manages the reading and writing of pages into memory from
@@ -73,7 +74,7 @@ public class BufferPool {
     private int maxNumPages;
     private int currNumPages;
     private LRUPool<HeapPage> pool;
-    private DbLogger logger;
+    private DbLogger logger = new DbLogger(getClass().getName(), getClass().getName() + ".log", false);
     /**
      * Creates a BufferPool that caches up to numPages pages.
      *
@@ -83,7 +84,6 @@ public class BufferPool {
         // some code goes here
         maxNumPages = numPages;
         pool = new LRUPool<>(maxNumPages);
-        logger = new DbLogger(getClass().getName(), getClass().getName() + ".log", true);
     }
     
     public static int getPageSize() {
@@ -205,9 +205,16 @@ public class BufferPool {
         throws DbException, IOException, TransactionAbortedException {
         // some code goes here
         // not necessary for lab1
-        Page p =getPage(tid, t.getRecordId().getPageId(), Permissions.READ_WRITE);
-        ((HeapPage) p).insertTuple(t);
-        p.markDirty(true, tid);
+//        Page p = getPage(tid, t.getRecordId().getPageId(), Permissions.READ_WRITE);
+//        ((HeapPage) p).insertTuple(t);
+//        p.markDirty(true, tid);
+        HeapFile databaseFile = (HeapFile) Database.getCatalog().getDatabaseFile(tableId);
+        ArrayList<Page> modifiedPages = databaseFile.insertTuple(tid, t);
+        logger.log("modifiedPages size: " + modifiedPages.size());
+        for (Page page : modifiedPages) {
+            page.markDirty(true, tid);
+            pool.putPage(page.getId().hashCode(), (HeapPage) page);
+        }
     }
 
     /**

@@ -61,7 +61,6 @@ public class HeapPageId implements PageId {
         if(o.getClass() != HeapPageId.class) return false;
         HeapPageId hpID = (HeapPageId) o;
         return (hpID.getTableId() == getTableId() && hpID.getPageNumber() == getPageNumber());
-//        return o.hashCode() == hashCode();
     }
 
     /**

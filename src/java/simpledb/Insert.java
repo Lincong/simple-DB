@@ -1,5 +1,7 @@
 package simpledb;
 
+import java.io.IOException;
+
 /**
  * Inserts tuples read from the child operator into the tableId specified in the
  * constructor
@@ -8,6 +10,9 @@ public class Insert extends Operator {
 
     private static final long serialVersionUID = 1L;
 
+    private TransactionId tid;
+    private OpIterator child;
+    private int tableID;
     /**
      * Constructor.
      *
@@ -24,23 +29,32 @@ public class Insert extends Operator {
     public Insert(TransactionId t, OpIterator child, int tableId)
             throws DbException {
         // some code goes here
+        tid = t;
+        this.child = child;
+        tableID = tableId;
     }
 
     public TupleDesc getTupleDesc() {
         // some code goes here
-        return null;
+        return child.getTupleDesc();
     }
 
     public void open() throws DbException, TransactionAbortedException {
         // some code goes here
+        child.open();
+        super.open();
     }
 
     public void close() {
         // some code goes here
+        child.close();
+        super.close();
     }
 
     public void rewind() throws DbException, TransactionAbortedException {
         // some code goes here
+        close();
+        open();
     }
 
     /**
@@ -58,17 +72,40 @@ public class Insert extends Operator {
      */
     protected Tuple fetchNext() throws TransactionAbortedException, DbException {
         // some code goes here
-        return null;
+        int cnt = 0;
+        BufferPool bpool = Database.getBufferPool();
+        while(child.hasNext()){
+            Tuple t = child.next();
+            try {
+                bpool.insertTuple(tid, tableID, t);
+            }catch (IOException e){
+                e.printStackTrace();
+                throw new DbException("IO exception happened while trying to insert a tuple through buffer pool");
+            }
+            cnt++;
+        }
+        Type [] t = new Type[1];
+        String [] names = new String[1];
+        t[0] = Type.INT_TYPE;
+        TupleDesc td = new TupleDesc(t, names);
+        Tuple ret = new Tuple(td);
+        Field dataField = new IntField(cnt);
+        ret.setField(0, dataField);
+        return ret;
     }
 
     @Override
     public OpIterator[] getChildren() {
         // some code goes here
-        return null;
+        OpIterator[] ret = new OpIterator[1];
+        ret[0] = child;
+        return ret;
     }
 
     @Override
     public void setChildren(OpIterator[] children) {
         // some code goes here
+        assert children.length == 1;
+        child = children[0];
     }
 }

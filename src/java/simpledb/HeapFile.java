@@ -239,7 +239,7 @@ class HeapFileIterator extends AbstractDbFileIterator {
         } else {
             if(!getIteratorForNextPage()) // no next tuple to read (maybe)
                 return null;
-            t = pageIterator.next();
+            t = (pageIterator.hasNext() ? pageIterator.next() : null);
         }
         return t;
     }
