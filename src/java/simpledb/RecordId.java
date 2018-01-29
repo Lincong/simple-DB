@@ -34,6 +34,18 @@ public class RecordId implements Serializable {
         return tupleNum;
     }
 
+    public void setPageId (PageId pid) throws DbException {
+        if(pid == null)
+            throw new DbException("pid can't be null");
+        pageID = pid;
+    }
+
+    public void setTupleNumber(int tupleNum) throws DbException {
+        if(tupleNum < 0)
+            throw  new DbException("tuple number can't be negative");
+        this.tupleNum = tupleNum;
+    }
+
     /**
      * @return the page id this RecordId references.
      */
@@ -52,8 +64,15 @@ public class RecordId implements Serializable {
     public boolean equals(Object o) {
         // some code goes here
         // throw new UnsupportedOperationException("implement this");
-        if(o == null || o.getClass() != RecordId.class) return false;
-        return ((RecordId) o).hashCode() == hashCode();
+//        if(o == null || o.getClass() != RecordId.class) return false;
+//        return ((RecordId) o).hashCode() == hashCode();
+        if (o instanceof RecordId) {
+            RecordId arg = (RecordId) o;
+            if (getPageId().equals(arg.getPageId()) && tupleNum == arg.getTupleNumber()){
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -65,10 +84,10 @@ public class RecordId implements Serializable {
     @Override
     public int hashCode() {
         // some code goes here
-        // throw new UnsupportedOperationException("implement this");
-
         // concatenate the hashcode of its PageID and the the tuple number
-        int pageHashCode = getPageId().hashCode();
-        return Integer.parseInt(Integer.toString(pageHashCode) + Integer.toString(getTupleNumber()));
+//        int pageHashCode = getPageId().hashCode();
+//        return Integer.parseInt(Integer.toString(pageHashCode) + Integer.toString(getTupleNumber()));
+        String hash = getPageId().hashCode() + "" + tupleNum;
+        return hash.hashCode();
     }
 }

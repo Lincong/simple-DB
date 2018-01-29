@@ -43,7 +43,9 @@ public class HeapPageId implements PageId {
         // some code goes here
 //        throw new UnsupportedOperationException("implement this");
 //        return Integer.parseInt(Integer.toString(tableId) + Integer.toString(pgNum));
-        return (Integer.toString(tableId) + Integer.toString(pgNum)).hashCode();
+//        return (Integer.toString(tableId) + Integer.toString(pgNum)).hashCode();
+        String toHash = "" + getTableId() + getPageNumber();
+        return toHash.hashCode();
     }
 
     /**
@@ -57,7 +59,9 @@ public class HeapPageId implements PageId {
         // some code goes here
         if(o == null) return false;
         if(o.getClass() != HeapPageId.class) return false;
-        return o.hashCode() == hashCode();
+        HeapPageId hpID = (HeapPageId) o;
+        return (hpID.getTableId() == getTableId() && hpID.getPageNumber() == getPageNumber());
+//        return o.hashCode() == hashCode();
     }
 
     /**
@@ -75,4 +79,7 @@ public class HeapPageId implements PageId {
         return data;
     }
 
+    public String toString() {
+        return getTableId() + ":" + getPageNumber();
+    }
 }

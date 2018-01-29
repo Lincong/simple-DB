@@ -24,6 +24,7 @@ public class HeapPage implements Page {
     private int emptySlotNum;
     private boolean isPageDirty;
     private TransactionId lastDirtiedTransaction;
+    private DbLogger logger = new DbLogger(getClass().getName(), getClass().getName() + ".log", false);
     /**
      * Create a HeapPage from a set of bytes of data read from disk.
      * The format of a HeapPage is a set of header bytes indicating
@@ -42,6 +43,7 @@ public class HeapPage implements Page {
      */
     // when a HeapPage is created, its data are given in an array
     public HeapPage(HeapPageId id, byte[] data) throws IOException {
+        logger.log("pid: " + id.toString());
         this.pid = id;
         this.td = Database.getCatalog().getTupleDesc(id.getTableId());
         this.numSlots = getNumTuples();
@@ -277,10 +279,14 @@ public class HeapPage implements Page {
         if(!t.getTupleDesc().equals(td))
             throw new DbException("Tuple description is mismatch.");
 
-        if(getNextEmptySlot() == 0)
+        if(getNumEmptySlots() == 0)
             throw new DbException("Page is full");
+
         int slot = getNextEmptySlot();
         assert slot != -1;
+        // set the record ID of the current tuple using the current page information
+        t.getRecordId().setPageId(getId());
+        t.getRecordId().setTupleNumber(slot);
         markSlotUsed(slot, true);
         tuples[slot] = t;
     }

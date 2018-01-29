@@ -28,6 +28,7 @@ public class HeapFile implements DbFile {
     private TupleDesc td;
     private int ID;
     private BufferPool bufferPool;
+    private DbLogger logger = new DbLogger(getClass().getName(), getClass().getName() + ".log", true);
 
     public HeapFile(File f, TupleDesc td) {
         // some code goes here
@@ -155,12 +156,18 @@ public class HeapFile implements DbFile {
         // some code goes here
         HeapPage p = getFreePage(tid);
         if (p != null) {
+            // check the
+            RecordId rid = new RecordId(p.getId(), -1);
+            t.setRecordId(rid);
             p.insertTuple(t);
             return new ArrayList<Page> (Arrays.asList(p));
         }
         // no empty pages found, so create a new one
         HeapPageId newHeapPageId = new HeapPageId(this.getId(), this.numPages());
         HeapPage newHeapPage = new HeapPage(newHeapPageId, HeapPage.createEmptyPageData());
+        logger.log("newHeapPage ID: " + newHeapPage.getId());
+        RecordId rid = new RecordId(newHeapPage.getId(), 0);
+        t.setRecordId(rid);
         newHeapPage.insertTuple(t);
 
         RandomAccessFile raf = new RandomAccessFile(this.f, "rw");
