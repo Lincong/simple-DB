@@ -1,12 +1,8 @@
 package simpledb;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.LinkedHashMap;
-import java.util.NoSuchElementException;
+import java.util.*;
+
 /**
  * BufferPool manages the reading and writing of pages into memory from
  * disk. Access methods call into it to retrieve pages, and it fetches
@@ -101,6 +97,7 @@ public class BufferPool {
     private int remainingPairNum;
 //    private Map<Integer, Page> m;
     private Pool m;
+    private List<Page> allPages;
 
     private DbLogger logger = new DbLogger(getClass().getName(), getClass().getName() + ".log", false);
     /**
@@ -114,6 +111,7 @@ public class BufferPool {
         remainingPairNum = maxNumPages;
 //        m = new LinkedHashMap<>(remainingPairNum, 0.75f, true);
         m = new Pool(remainingPairNum);
+        allPages = new LinkedList<>();
     }
 
     public Page getPage(int pageHashCode) {
@@ -128,6 +126,7 @@ public class BufferPool {
             throw new DbException("Buffer pool is full!");
         boolean hasKey = m.containsKey(pageHashCode);
         m.put(pageHashCode, page);
+        allPages.add(page);
         if(!hasKey){
             logger.log("Page not in buffer pool");
             this.remainingPairNum--;
@@ -140,9 +139,9 @@ public class BufferPool {
     }
 
     public synchronized List<Page> getAllPages(){
-        List<Page> allPages = new ArrayList<>();
-        for(int key : m.keySet())
-            allPages.add(m.get(key));
+//        List<Page> allPages = new ArrayList<>();
+//        for(int key : m.keySet())
+//            allPages.add(m.get(key));
         return allPages;
     }
 
@@ -360,6 +359,7 @@ public class BufferPool {
         }
 
         m.remove(k);
+        allPages.remove(pageToEvict);
         remainingPairNum++;
     }
 }
