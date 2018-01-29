@@ -1,6 +1,7 @@
 package simpledb;
 
 import java.io.*;
+import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.Iterator;
 
@@ -26,12 +27,14 @@ public class HeapFile implements DbFile {
     private File f;
     private TupleDesc td;
     private int ID;
+    private BufferPool bufferPool;
 
     public HeapFile(File f, TupleDesc td) {
         // some code goes here
         this.f = f;
         this.td = td;
         ID = f.getAbsoluteFile().hashCode();
+        bufferPool = Database.getBufferPool();
     }
 
     /**
@@ -135,20 +138,38 @@ public class HeapFile implements DbFile {
         return (int) (totalBytes / BufferPool.getPageSize());
     }
 
+    private HeapPage getFreePage(TransactionId tid) throws TransactionAbortedException, DbException {
+        for (int i = 0; i < this.numPages(); i++)
+        {
+            PageId pid = new HeapPageId(this.getId(), i);
+            HeapPage hpage = (HeapPage) Database.getBufferPool().getPage(tid, pid, Permissions.READ_WRITE);
+            if (hpage.getNumEmptySlots() > 0)
+                return hpage;
+        }
+        return null;
+    }
+
     // see DbFile.java for javadocs
     public ArrayList<Page> insertTuple(TransactionId tid, Tuple t)
             throws DbException, IOException, TransactionAbortedException {
         // some code goes here
-        return null;
-        // not necessary for lab1
+        HeapPage p = getFreePage(tid);
+        if (p != null) {
+            p.insertTuple(t);
+            return new ArrayList<Page> (Arrays.asList(p));
+        }
+
+        return null; // lab 2
     }
 
     // see DbFile.java for javadocs
     public ArrayList<Page> deleteTuple(TransactionId tid, Tuple t) throws DbException,
             TransactionAbortedException {
         // some code goes here
-        return null;
-        // not necessary for lab1
+        PageId pid = t.getRecordId().getPageId();
+        Page p = bufferPool.getPage(tid, pid, Permissions.READ_WRITE);
+        ((HeapPage) p).deleteTuple(t);
+        return new ArrayList<Page> (Arrays.asList(p));
     }
 
     // see DbFile.java for javadocs

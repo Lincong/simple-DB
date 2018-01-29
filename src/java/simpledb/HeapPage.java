@@ -247,7 +247,15 @@ public class HeapPage implements Page {
      */
     public void deleteTuple(Tuple t) throws DbException {
         // some code goes here
-        // not necessary for lab1
+        // check if page ID matches
+        RecordId tupRecord = t.getRecordId();
+        if(!tupRecord.getPageId().equals(pid))
+            throw new DbException("Tuple to delete doesn't seem to be on this page");
+        int tupNum = tupRecord.getTupleNumber();
+        if(!isSlotUsed(tupNum))
+            throw  new DbException("Slot is already empty");
+        markSlotUsed(tupNum, false);
+        tuples[tupNum] = null;
     }
 
     /**
@@ -259,7 +267,19 @@ public class HeapPage implements Page {
      */
     public void insertTuple(Tuple t) throws DbException {
         // some code goes here
-        // not necessary for lab1
+        RecordId tupRecord = t.getRecordId();
+        if(!tupRecord.getPageId().equals(pid))
+            throw new DbException("Tuple to delete doesn't seem to be on this page");
+
+        if(!t.getTupleDesc().equals(td))
+            throw new DbException("Tuple description is mismatch.");
+
+        if(getNextEmptySlot() == 0)
+            throw new DbException("Page is full");
+        int slot = getNextEmptySlot();
+        assert slot != -1;
+        markSlotUsed(slot, true);
+        tuples[slot] = t;
     }
 
     /**
@@ -297,12 +317,26 @@ public class HeapPage implements Page {
         return isNthBitSet(byteVal, i % 8);
     }
 
+    // return -1 if the page is full
+    public int getNextEmptySlot() {
+        for(int i = 0; i < numSlots; i++){
+            if(!isSlotUsed(i))
+                return i;
+        }
+        return -1;
+    }
     /**
      * Abstraction to fill or clear a slot on this page.
      */
     private void markSlotUsed(int i, boolean value) {
         // some code goes here
         // not necessary for lab1
+        int byteNum = i / 8;
+        int bitNum = i % 8;
+        // ^ = exclusive or
+        if (isSlotUsed(i) ^ value){
+            header[byteNum] ^= (1 << bitNum);
+        }
     }
 
     /**
