@@ -158,8 +158,19 @@ public class HeapFile implements DbFile {
             p.insertTuple(t);
             return new ArrayList<Page> (Arrays.asList(p));
         }
+        // no empty pages found, so create a new one
+        HeapPageId newHeapPageId = new HeapPageId(this.getId(), this.numPages());
+        HeapPage newHeapPage = new HeapPage(newHeapPageId, HeapPage.createEmptyPageData());
+        newHeapPage.insertTuple(t);
 
-        return null; // lab 2
+        RandomAccessFile raf = new RandomAccessFile(this.f, "rw");
+        int offset = BufferPool.getPageSize() * this.numPages();
+        raf.seek(offset);
+        byte[] newHeapPageData = newHeapPage.getPageData();
+        raf.write(newHeapPageData, 0, BufferPool.getPageSize());
+        raf.close();
+
+        return new ArrayList<Page> (Arrays.asList(newHeapPage));
     }
 
     // see DbFile.java for javadocs
