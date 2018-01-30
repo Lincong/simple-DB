@@ -117,11 +117,12 @@ public class SystemTestUtil {
                 Debug.log("\t" + Utility.listToString(t));
             }
         }
-
         iterator.open();
         while (iterator.hasNext()) {
             Tuple t = iterator.next();
             ArrayList<Integer> list = tupleToList(t);
+            System.out.println("get tuple: " + list.toString());
+            System.out.println("expected tuples: " + copy.toString());
             boolean isExpected = copy.remove(list);
             Debug.log("scanned tuple: %s (%s)", t, isExpected ? "expected" : "not expected");
             if (!isExpected) {

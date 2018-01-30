@@ -14,6 +14,7 @@ public class Join extends Operator {
     private JoinPredicate pred;
     private Tuple currChild1Tuple;
     private Tuple currChild2Tuple;
+    private DbLogger logger = new DbLogger(getClass().getName(), getClass().getName() + ".log",true);
     /**
      * Constructor. Accepts two children to join and the predicate to join them
      * on
@@ -113,12 +114,13 @@ public class Join extends Operator {
      */
     protected Tuple fetchNext() throws TransactionAbortedException, DbException {
         // some code goes here
-
+        logger.log("In fetchNext()");
         while(!pred.filter(currChild1Tuple, currChild2Tuple)) {
             if(!updateCurrTuplePair())
+                logger.log("return: null");
                 return null;
         }
-
+        logger.log("Found matching pair");
         // find the matching tuple pair!
         TupleDesc mergedDesc = TupleDesc.merge(currChild1Tuple.getTupleDesc(), currChild2Tuple.getTupleDesc());
         Tuple t = new Tuple(mergedDesc);
@@ -131,20 +133,26 @@ public class Join extends Operator {
             t.setField(i, currChild2Tuple.getField(j));
             i++;
         }
+        logger.log("move to the next pair");
         updateCurrTuplePair();
+        logger.log("return: " + t.toString());
         return t;
     }
 
     private boolean updateCurrTuplePair() throws TransactionAbortedException, DbException {
+        logger.log("curr tuple 1: " + currChild1Tuple.toString());
+        logger.log("curr tuple 2: " + currChild2Tuple.toString());
         if(child2.hasNext()){
             currChild2Tuple = child2.next();
             return true;
         }
-        if(!child1.hasNext())  // nested iteration is over
+        if(!child1.hasNext()) {  // nested iteration is over
+            logger.log("No more tuple");
             return false;
+        }
 
         currChild1Tuple = child1.next();
-        child2.rewind();
+        child2.rewind(); // since child2 does not have next so rewind is necessary
         currChild2Tuple = child2.next();
         return true;
     }
