@@ -14,6 +14,7 @@ public class Join extends Operator {
     private JoinPredicate pred;
     private Tuple currChild1Tuple;
     private Tuple currChild2Tuple;
+    private boolean hasTuple;
     private DbLogger logger = new DbLogger(getClass().getName(), getClass().getName() + ".log",true);
     /**
      * Constructor. Accepts two children to join and the predicate to join them
@@ -33,6 +34,7 @@ public class Join extends Operator {
         this.child2 = child2;
         currChild1Tuple = null;
         currChild2Tuple = null;
+        hasTuple = false;
     }
 
     public JoinPredicate getJoinPredicate() {
@@ -76,6 +78,7 @@ public class Join extends Operator {
         child2.open();
         currChild1Tuple = child1.next();
         currChild2Tuple = child2.next();
+        hasTuple = true;
         super.open();
     }
 
@@ -85,6 +88,7 @@ public class Join extends Operator {
         child2.close();
         currChild1Tuple = null;
         currChild2Tuple = null;
+        hasTuple = false;
         super.close();
     }
 
@@ -115,6 +119,9 @@ public class Join extends Operator {
     protected Tuple fetchNext() throws TransactionAbortedException, DbException {
         // some code goes here
         logger.log("In fetchNext()");
+        if(!hasTuple)
+            return null;
+
         while(!pred.filter(currChild1Tuple, currChild2Tuple)) {
             if(!updateCurrTuplePair())
                 logger.log("return: null");
@@ -148,7 +155,8 @@ public class Join extends Operator {
         }
         if(!child1.hasNext()) {  // nested iteration is over
             logger.log("No more tuple");
-            return false;
+            hasTuple = false;
+            return hasTuple;
         }
 
         currChild1Tuple = child1.next();

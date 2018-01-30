@@ -121,8 +121,10 @@ public class SystemTestUtil {
         while (iterator.hasNext()) {
             Tuple t = iterator.next();
             ArrayList<Integer> list = tupleToList(t);
-            System.out.println("get tuple: " + list.toString());
-            System.out.println("expected tuples: " + copy.toString());
+//            System.out.println("Get next tuple from operator");
+//            System.out.println("get tuple: " + list.toString());
+//            System.out.println("expected tuple: " + copy.toString());
+//            System.out.println();
             boolean isExpected = copy.remove(list);
             Debug.log("scanned tuple: %s (%s)", t, isExpected ? "expected" : "not expected");
             if (!isExpected) {
