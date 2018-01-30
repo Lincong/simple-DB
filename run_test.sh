@@ -9,7 +9,7 @@ run_unit_test(){
 
 run_system_test(){
     echo --------start---------
-    ant runsystest -Dtest=$1
+    ant runsystest -Dtest=$1 -Dsimpledb.Debug=1
     echo ---------end----------
     echo 
 }

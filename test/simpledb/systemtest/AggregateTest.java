@@ -15,7 +15,6 @@ public class AggregateTest extends SimpleDbTestBase {
         TransactionId tid = new TransactionId();
         SeqScan ss = new SeqScan(tid, table.getId(), "");
         Aggregate ag = new Aggregate(ss, aggregateColumn, groupColumn, operation);
-
         SystemTestUtil.matchTuples(ag, expectedResult);
         Database.getBufferPool().transactionComplete(tid);
     }
@@ -80,6 +79,21 @@ public class AggregateTest extends SimpleDbTestBase {
         HeapFile table = SystemTestUtil.createRandomHeapFile(
                 COLUMNS, ROWS, MAX_VALUE, null, createdTuples);
 
+//        int currSum = 0;
+//        int cnt = 1;
+//        int currAvg = 0;
+//        for(ArrayList l : createdTuples){
+//            if((int)l.get(groupColumn) == 0){
+//                System.out.println("anotherTupleAggFieldInt: " + (int)l.get(1));
+//                System.out.println("zero freq: " + cnt);
+//                currSum += (int)l.get(1);
+//                System.out.println("curr sum: " + currSum);
+//                currAvg = currSum / cnt;
+//                System.out.println("curr AVG: " + currAvg);
+//                cnt++;
+//                System.out.println();
+//            }
+//        }
         // Compute the expected answer
         ArrayList<ArrayList<Integer>> expected =
                 aggregate(createdTuples, operation, 1, groupColumn);

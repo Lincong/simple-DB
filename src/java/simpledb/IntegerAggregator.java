@@ -16,6 +16,7 @@ public class IntegerAggregator implements Aggregator {
     private int noGbCnt;
     private Map<Object, Tuple> groups;
     private Map<Object, Integer> groupByFieldCnt;
+    private Map<Object, Integer> groupByFieldSum;
     private TupleDesc resDesc;
     private DbLogger logger = new DbLogger(getClass().getName(), getClass().getName() + ".log",true);
     /**
@@ -87,12 +88,13 @@ public class IntegerAggregator implements Aggregator {
             resDesc = new TupleDesc(tdTypes, tdNames);
             groups = new HashMap<>();
             groupByFieldCnt = new HashMap<>();
+            groupByFieldSum = new HashMap<>();
         }
     }
 
     private int getTupleAggFieldInt(Tuple tup){
-        int idx = (gbfield == NO_GROUPING ? 0 : 1);
-        return ((IntField) tup.getField(idx)).getValue();
+//        int idx = (gbfield == NO_GROUPING ? 0 : 1);
+        return ((IntField) tup.getField(afield)).getValue();
     }
     /**
      * Merge a new tuple into the aggregate, grouping as indicated in the
@@ -108,8 +110,8 @@ public class IntegerAggregator implements Aggregator {
             isDescSet = true;
         }
 
-        logger.log("-----Op: " + op.toString());
-        logger.log("Tuple to merge: " + tup.toString());
+//        logger.log("-----Op: " + op.toString());
+//        logger.log("Tuple to merge: " + tup.toString());
         int anotherTupleAggFieldInt = getTupleAggFieldInt(tup);
         int currTupleAggFieldInt;
         Object key = null;
@@ -124,6 +126,7 @@ public class IntegerAggregator implements Aggregator {
                 Tuple t = getZeroCountTuple(tup);
                 groups.put(key, t);
                 groupByFieldCnt.put(key, 0);
+                groupByFieldSum.put(key, 0);
                 currTupleAggFieldInt = 0;
 
             } else {
@@ -161,8 +164,19 @@ public class IntegerAggregator implements Aggregator {
                 break;
 
             case AVG:
+                int sum;
                 mergedTupleCnt = (gbfield == NO_GROUPING ? noGbCnt: groupByFieldCnt.get(key));
-                aggFieldVal = (currTupleAggFieldInt * mergedTupleCnt + anotherTupleAggFieldInt) / (mergedTupleCnt + 1);
+                sum = groupByFieldSum.get(key) + anotherTupleAggFieldInt;
+                groupByFieldSum.put(key, sum);
+                aggFieldVal = sum / (mergedTupleCnt + 1);
+//                if((int)key == 0){
+//                    logger.log("-----Op: " + op.toString());
+//                    logger.log("Tuple to merge: " + tup.toString());
+//                    logger.log("anotherTupleAggFieldInt: " + anotherTupleAggFieldInt);
+//                    logger.log("zero freq: " + (groupByFieldCnt.get(key) + 1));
+//                    logger.log("curr sum:" + sum);
+//                    logger.log("curr AVG: " + aggFieldVal);
+//                }
                 updateTuple = (gbfield == NO_GROUPING ? noGbRes : groups.get(key));
                 setTupleFieldInt(updateTuple, aggFieldVal);
                 break;
