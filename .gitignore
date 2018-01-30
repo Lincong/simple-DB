@@ -4,3 +4,6 @@ bin/
 dist/
 log
 .idea
+*.txt
+*.dat
+master

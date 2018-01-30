@@ -34,6 +34,7 @@ public class Catalog {
     }
 
     private List<TableInfo> catalogs;
+    private DbLogger logger = new DbLogger(getClass().getName(), getClass().getName() + ".log",false);
 
     public Catalog() {
         // some code goes here
@@ -134,8 +135,11 @@ public class Catalog {
     public Iterator<Integer> tableIdIterator() {
         // some code goes here
         Set<Integer> tableIds = new HashSet<>();
+        logger.log("Here!!");
         for(TableInfo table : catalogs) {
-            tableIds.add(table.file.getId());
+            int id = table.file.getId();
+            logger.log("Table ID: " + id);
+            tableIds.add(id);
         }
         return tableIds.iterator();
     }
@@ -164,7 +168,7 @@ public class Catalog {
             while ((line = br.readLine()) != null) {
                 //assume line is of the format name (field type, field type, ...)
                 String name = line.substring(0, line.indexOf("(")).trim();
-                //System.out.println("TABLE NAME: " + name);
+                //logger.log("TABLE NAME: " + name);
                 String fields = line.substring(line.indexOf("(") + 1, line.indexOf(")")).trim();
                 String[] els = fields.split(",");
                 ArrayList<String> names = new ArrayList<String>();

@@ -48,8 +48,9 @@ public class TableStats {
     }
 
     public static void computeStatistics() {
+        System.out.println("1");
         Iterator<Integer> tableIt = Database.getCatalog().tableIdIterator();
-
+        System.out.println("2");
         System.out.println("Computing table stats.");
         while (tableIt.hasNext()) {
             int tableid = tableIt.next();
