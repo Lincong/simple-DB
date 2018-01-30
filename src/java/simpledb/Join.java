@@ -15,7 +15,7 @@ public class Join extends Operator {
     private Tuple currChild1Tuple;
     private Tuple currChild2Tuple;
     private boolean hasTuple;
-    private DbLogger logger = new DbLogger(getClass().getName(), getClass().getName() + ".log",true);
+    private DbLogger logger = new DbLogger(getClass().getName(), getClass().getName() + ".log",false);
     /**
      * Constructor. Accepts two children to join and the predicate to join them
      * on
@@ -119,13 +119,16 @@ public class Join extends Operator {
     protected Tuple fetchNext() throws TransactionAbortedException, DbException {
         // some code goes here
         logger.log("In fetchNext()");
-        if(!hasTuple)
+        if(!hasTuple) {
+            logger.log("return: null. hasTuple == false");
             return null;
+        }
 
         while(!pred.filter(currChild1Tuple, currChild2Tuple)) {
-            if(!updateCurrTuplePair())
+            if(!updateCurrTuplePair()) {
                 logger.log("return: null");
                 return null;
+            }
         }
         logger.log("Found matching pair");
         // find the matching tuple pair!

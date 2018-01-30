@@ -143,6 +143,7 @@ public class TestUtil {
 //                System.out.println("---------\n");
                 if (compareTuples(expectedTup, next)) {
                     matched = true;
+//                    System.out.println("match!");
                     break;
                 }
             }
