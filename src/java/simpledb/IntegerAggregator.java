@@ -14,11 +14,12 @@ public class IntegerAggregator implements Aggregator {
     private boolean isDescSet;
     private Tuple noGbRes;
     private int noGbCnt;
+    private int noGbSum;
     private Map<Object, Tuple> groups;
     private Map<Object, Integer> groupByFieldCnt;
     private Map<Object, Integer> groupByFieldSum;
     private TupleDesc resDesc;
-    private DbLogger logger = new DbLogger(getClass().getName(), getClass().getName() + ".log",true);
+    private DbLogger logger = new DbLogger(getClass().getName(), getClass().getName() + ".log",false);
     /**
      * Aggregate constructor
      * 
@@ -76,6 +77,7 @@ public class IntegerAggregator implements Aggregator {
             resDesc = new TupleDesc(tdTypes, tdNames);
             noGbRes = getZeroCountTuple(tup);
             noGbCnt = 0;
+            noGbSum = 0;
 
         } else {
             tdTypes = new Type[2];
@@ -166,17 +168,13 @@ public class IntegerAggregator implements Aggregator {
             case AVG:
                 int sum;
                 mergedTupleCnt = (gbfield == NO_GROUPING ? noGbCnt: groupByFieldCnt.get(key));
-                sum = groupByFieldSum.get(key) + anotherTupleAggFieldInt;
-                groupByFieldSum.put(key, sum);
+                sum = (gbfield == NO_GROUPING ? noGbSum : groupByFieldSum.get(key)) + anotherTupleAggFieldInt;
+                if (gbfield == NO_GROUPING)
+                    noGbSum = sum;
+                else
+                    groupByFieldSum.put(key, sum);
+
                 aggFieldVal = sum / (mergedTupleCnt + 1);
-//                if((int)key == 0){
-//                    logger.log("-----Op: " + op.toString());
-//                    logger.log("Tuple to merge: " + tup.toString());
-//                    logger.log("anotherTupleAggFieldInt: " + anotherTupleAggFieldInt);
-//                    logger.log("zero freq: " + (groupByFieldCnt.get(key) + 1));
-//                    logger.log("curr sum:" + sum);
-//                    logger.log("curr AVG: " + aggFieldVal);
-//                }
                 updateTuple = (gbfield == NO_GROUPING ? noGbRes : groups.get(key));
                 setTupleFieldInt(updateTuple, aggFieldVal);
                 break;

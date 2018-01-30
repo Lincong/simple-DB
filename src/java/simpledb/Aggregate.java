@@ -18,7 +18,7 @@ public class Aggregate extends Operator {
     private int gfield;
     private Aggregator.Op aop;
     private TupleDesc resDesc;
-    private DbLogger logger = new DbLogger(getClass().getName(), getClass().getName() + ".log", true);
+    private DbLogger logger = new DbLogger(getClass().getName(), getClass().getName() + ".log", false);
     /**
      * Constructor.
      * 

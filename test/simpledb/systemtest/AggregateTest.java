@@ -102,30 +102,30 @@ public class AggregateTest extends SimpleDbTestBase {
         validateAggregate(table, operation, 1, groupColumn, expected);
     }
 
-//    @Test public void testSum() throws IOException, DbException, TransactionAbortedException {
-//        doAggregate(Aggregator.Op.SUM, 0);
-//    }
-//
-//    @Test public void testMin() throws IOException, DbException, TransactionAbortedException {
-//        doAggregate(Aggregator.Op.MIN, 0);
-//    }
-//
-//    @Test public void testMax() throws IOException, DbException, TransactionAbortedException {
-//        doAggregate(Aggregator.Op.MAX, 0);
-//    }
-//
-//    @Test public void testCount() throws IOException, DbException, TransactionAbortedException {
-//        doAggregate(Aggregator.Op.COUNT, 0);
-//    }
+    @Test public void testSum() throws IOException, DbException, TransactionAbortedException {
+        doAggregate(Aggregator.Op.SUM, 0);
+    }
+
+    @Test public void testMin() throws IOException, DbException, TransactionAbortedException {
+        doAggregate(Aggregator.Op.MIN, 0);
+    }
+
+    @Test public void testMax() throws IOException, DbException, TransactionAbortedException {
+        doAggregate(Aggregator.Op.MAX, 0);
+    }
+
+    @Test public void testCount() throws IOException, DbException, TransactionAbortedException {
+        doAggregate(Aggregator.Op.COUNT, 0);
+    }
 
     @Test public void testAverage() throws IOException, DbException, TransactionAbortedException {
         doAggregate(Aggregator.Op.AVG, 0);
     }
 
-//    @Test public void testAverageNoGroup()
-//            throws IOException, DbException, TransactionAbortedException {
-//        doAggregate(Aggregator.Op.AVG, Aggregator.NO_GROUPING);
-//    }
+    @Test public void testAverageNoGroup()
+            throws IOException, DbException, TransactionAbortedException {
+        doAggregate(Aggregator.Op.AVG, Aggregator.NO_GROUPING);
+    }
 
     /** Make test compatible with older version of ant. */
     public static junit.framework.Test suite() {
