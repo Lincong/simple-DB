@@ -98,6 +98,7 @@ public class BufferPool {
 //    private Map<Integer, Page> m;
     private Pool m;
     private List<Page> allPages;
+    private LTM lockManager;
 
     private DbLogger logger = new DbLogger(getClass().getName(), getClass().getName() + ".log", false);
     /**
@@ -112,6 +113,7 @@ public class BufferPool {
 //        m = new LinkedHashMap<>(remainingPairNum, 0.75f, true);
         m = new Pool(remainingPairNum);
         allPages = new LinkedList<>();
+        lockManager = new LTM();
     }
 
     public Page getPage(int pageHashCode) {
