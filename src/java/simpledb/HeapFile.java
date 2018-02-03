@@ -1,9 +1,13 @@
 package simpledb;
 
-import java.io.*;
-import java.util.Arrays;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Iterator;
+import java.util.concurrent.Semaphore;
 
 /**
  * HeapFile is an implementation of a DbFile that stores a collection of tuples
@@ -29,6 +33,7 @@ public class HeapFile implements DbFile {
     private int ID;
     private BufferPool bufferPool;
     private DbLogger logger = new DbLogger(getClass().getName(), getClass().getName() + ".log", false);
+    private Semaphore synchronizer = new Semaphore(1, true);
 
     public HeapFile(File f, TupleDesc td) {
         // some code goes here
@@ -147,12 +152,14 @@ public class HeapFile implements DbFile {
     }
 
     private HeapPage getFreePage(TransactionId tid) throws TransactionAbortedException, DbException {
-        for (int i = 0; i < this.numPages(); i++)
-        {
+
+        for (int i = 0; i < this.numPages(); i++) {
             PageId pid = new HeapPageId(this.getId(), i);
             HeapPage hpage = (HeapPage) Database.getBufferPool().getPage(tid, pid, Permissions.READ_WRITE);
             if (hpage.getNumEmptySlots() > 0)
                 return hpage;
+            else // otherwise release the lock on the page since the page is not going to be used
+                Database.getBufferPool().releasePage(tid, hpage.getId());
         }
         return null;
     }
@@ -171,12 +178,39 @@ public class HeapFile implements DbFile {
             return new ArrayList<> (Arrays.asList(p));
         }
         // no empty pages found, so create a new one
-        HeapPageId newHeapPageId = new HeapPageId(this.getId(), this.numPages());
-        HeapPage newHeapPage = new HeapPage(newHeapPageId, HeapPage.createEmptyPageData());
-        logger.log("newHeapPage ID: " + newHeapPage.getId());
-        newHeapPage.insertTuple(t);
-        writePage(newHeapPage);
-        return new ArrayList<> (Arrays.asList(newHeapPage));
+        int newPageNum = this.numPages();
+        synchronizerOn();
+        HeapPageId newHeapPageId = new HeapPageId(this.getId(), newPageNum);
+        BufferPool bpool = Database.getBufferPool();
+        try {
+            if (newPageNum < this.numPages()) { // page has been allocated
+                bpool.getPage(tid, newHeapPageId, Permissions.READ_WRITE);
+
+            } else {
+                HeapPage newHeapPage = new HeapPage(newHeapPageId, HeapPage.createEmptyPageData());
+                logger.log("newHeapPage ID: " + newHeapPage.getId());
+                writePage(newHeapPage);
+                bpool.lockPage(tid, newHeapPageId, Permissions.READ_WRITE);
+                bpool.putPage(newHeapPageId.hashCode(), newHeapPage);
+            }
+        } finally {
+            synchronizerOff();
+        }
+        return new ArrayList<> (Arrays.asList());
+    }
+
+    private void synchronizerOn(){
+        try {
+            synchronizer.acquire();
+        } catch (InterruptedException e){
+            e.printStackTrace();
+            System.out.println("This should not happen");
+            System.exit(1);
+        }
+    }
+
+    private void synchronizerOff(){
+        synchronizer.release();
     }
 
     // see DbFile.java for javadocs
@@ -205,6 +239,7 @@ class HeapFileIterator extends AbstractDbFileIterator {
     private Iterator<Tuple> pageIterator;
     private BufferPool bufferPool;
     private int totalPageNum;
+    private HeapPage currPage;
     private int currPageNum;
 
     HeapFileIterator(HeapFile heapFile, TransactionId tid){
@@ -213,6 +248,7 @@ class HeapFileIterator extends AbstractDbFileIterator {
         totalPageNum = this.heapFile.numPages();
         pageIterator = null;
         bufferPool = Database.getBufferPool();
+        currPage = null;
         currPageNum = 0;
     }
 
@@ -239,6 +275,8 @@ class HeapFileIterator extends AbstractDbFileIterator {
             t = pageIterator.next();
 
         } else {
+            // release the lock on the current page before get a new page from the buffer pool
+            Database.getBufferPool().releasePage(tid, currPage.getId());
             if(!getIteratorForNextPage()) // no next tuple to read (maybe)
                 return null;
             t = (pageIterator.hasNext() ? pageIterator.next() : null);
@@ -250,8 +288,8 @@ class HeapFileIterator extends AbstractDbFileIterator {
         if (currPageNum >= totalPageNum)
             return false;
         HeapPageId pageToReadID = new HeapPageId(heapFile.getId(), currPageNum);
-        HeapPage newPage = (HeapPage) bufferPool.getPage(tid, pageToReadID, Permissions.READ_ONLY);
-        pageIterator = newPage.iterator();
+        currPage = (HeapPage) bufferPool.getPage(tid, pageToReadID, Permissions.READ_ONLY);
+        pageIterator = currPage.iterator();
         currPageNum++;
         return true;
     }
@@ -259,6 +297,7 @@ class HeapFileIterator extends AbstractDbFileIterator {
     public void close() {
         // Ensures that a future call to next() will fail
         // next = null;
+        Database.getBufferPool().releasePage(tid, currPage.getId());
         currPageNum = 0; // reset
         pageIterator = null;
         super.close();

@@ -147,7 +147,6 @@ public class BufferPool {
         return allPages;
     }
 
-
     public static int getPageSize() {
       return pageSize;
     }
@@ -160,6 +159,19 @@ public class BufferPool {
     // THIS FUNCTION SHOULD ONLY BE USED FOR TESTING!!
     public static void resetPageSize() {
     	BufferPool.pageSize = DEFAULT_PAGE_SIZE;
+    }
+
+//    public synchronized Page createNewPageWithLock(TransactionId tid, PageId pid, Permissions perm)
+//            throws TransactionAbortedException, DbException, IOException {
+//        HeapPage newHeapPage = new HeapPage((HeapPageId) pid, HeapPage.createEmptyPageData());
+//        logger.log("newHeapPage ID: " + newHeapPage.getId());
+//        writePage(newHeapPage);
+//        lockManager.getLock(tid, pid, perm);
+//
+//    }
+    public void lockPage(TransactionId tid, PageId pid, Permissions perm)
+            throws TransactionAbortedException, DbException {
+        lockManager.getLock(tid, pid, perm);
     }
 
     /**
@@ -215,13 +227,13 @@ public class BufferPool {
      * @param tid the ID of the transaction requesting the unlock
      * @param pid the ID of the page to unlock
      */
-    public  void releasePage(TransactionId tid, PageId pid) {
+    public void releasePage(TransactionId tid, PageId pid) {
         // some code goes here
-        // not necessary for lab1|lab2
         try {
             lockManager.returnLock(tid, pid);
-        }catch (DbException e){
+        } catch (DbException e){
             e.printStackTrace();
+            System.exit(1);
         }
     }
 
@@ -272,7 +284,6 @@ public class BufferPool {
      */
     public void insertTuple(TransactionId tid, int tableId, Tuple t)
         throws DbException, IOException, TransactionAbortedException {
-        // some code goes here
         HeapFile databaseFile = (HeapFile) Database.getCatalog().getDatabaseFile(tableId);
         ArrayList<Page> modifiedPages = databaseFile.insertTuple(tid, t);
         logger.log("modifiedPages size: " + modifiedPages.size());
