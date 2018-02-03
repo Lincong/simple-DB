@@ -52,7 +52,7 @@ class PageState {
             assert !(hasReadLock && hasWriteLock);
             if(hasWriteLock){
                 releaseStateLock();
-                throw new DbException("transaction " + tid + " is requesting write lock but it already has the lock");
+                throw new DbException("transaction " + tid + " is requesting a write lock but it already has the lock");
             }
 
             // TODO: check if there is any transaction that needs to be aborted

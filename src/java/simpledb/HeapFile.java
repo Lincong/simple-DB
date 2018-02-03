@@ -125,6 +125,13 @@ public class HeapFile implements DbFile {
     public void writePage(Page page) throws IOException {
         // some code goes here
         // not necessary for lab1
+        RandomAccessFile raf = new RandomAccessFile(this.f, "rw");
+        int offset = BufferPool.getPageSize() * page.getId().getPageNumber();
+        raf.seek(offset);
+        byte[] newHeapPageData = page.getPageData();
+        // the modified new page is already written to disk. So no need to mark it as dirty
+        raf.write(newHeapPageData, 0, BufferPool.getPageSize());
+        raf.close();
     }
 
     /**
@@ -160,6 +167,7 @@ public class HeapFile implements DbFile {
             RecordId rid = new RecordId(p.getId(), -1);
             t.setRecordId(rid);
             p.insertTuple(t);
+            p.markDirty(true, tid);
             return new ArrayList<> (Arrays.asList(p));
         }
         // no empty pages found, so create a new one
@@ -167,14 +175,7 @@ public class HeapFile implements DbFile {
         HeapPage newHeapPage = new HeapPage(newHeapPageId, HeapPage.createEmptyPageData());
         logger.log("newHeapPage ID: " + newHeapPage.getId());
         newHeapPage.insertTuple(t);
-
-        RandomAccessFile raf = new RandomAccessFile(this.f, "rw");
-        int offset = BufferPool.getPageSize() * this.numPages();
-        raf.seek(offset);
-        byte[] newHeapPageData = newHeapPage.getPageData();
-        raf.write(newHeapPageData, 0, BufferPool.getPageSize());
-        raf.close();
-
+        writePage(newHeapPage);
         return new ArrayList<> (Arrays.asList(newHeapPage));
     }
 
@@ -185,6 +186,7 @@ public class HeapFile implements DbFile {
         PageId pid = t.getRecordId().getPageId();
         Page p = bufferPool.getPage(tid, pid, Permissions.READ_WRITE);
         ((HeapPage) p).deleteTuple(t);
+        p.markDirty(true, tid);
         return new ArrayList<Page> (Arrays.asList(p));
     }
 

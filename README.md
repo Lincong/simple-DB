@@ -66,3 +66,33 @@ Predicate:
     1. 1 field (field ID that is the index of field in the Tuple object. Tuple里面的第几个field)
     2. 1 operator (op)
     3. 1 operand (Field)
+
+
+"->" means "use" 
+
+HeapFile iterator -> Bufferpool.getPage() -> HeapFile readPage (read from disk)
+
+HeapFile insert   -> Bufferpool.getPage() -> HeapFile readPage
+
+HeapFile delete   -> Bufferpool.getPage() -> HeapFile readPage
+
+Bufferpool insertTuple -> HeapFile insertTuple -> 
+    1. HeapPage insert (on a free one or a new page)
+    2. writePage(). (write to disk)
+
+Bufferpool deleteTuple -> HeapFile deleteTuple -> 
+    1. HeapPage insert ()
+    2. put page in the buffer pool
+
+
+
+concurrency control
+---
+1. HeapFile.insertTuple(), HeapFile.deleteTuple() and HeapFile.iterator()
+should both use BufferPool.getPage()
+
+2. BufferPool.insertTuple() and BufferPool.deleteTupe() call markDirty()
+
+3. Release all locks associated with a transaction after it has committed or aborted to ensure strict 2PL
+
+4. 

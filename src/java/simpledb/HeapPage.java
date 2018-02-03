@@ -258,7 +258,7 @@ public class HeapPage implements Page {
             throw new DbException("Tuple to delete doesn't seem to be on this page");
         int tupNum = tupRecord.getTupleNumber();
         if(!isSlotUsed(tupNum))
-            throw  new DbException("Slot is already empty");
+            throw new DbException("Slot is already empty");
         markSlotUsed(tupNum, false);
         tuples[tupNum] = null;
     }
