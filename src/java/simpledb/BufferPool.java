@@ -190,6 +190,8 @@ public class BufferPool {
             throw new DbException("Can not get DbFile for table with ID: " + pid.getTableId());
         }
         logger.log("----Try to read page in buffer pool: " + pid.hashCode() + "----");
+        // trying to get a lock on the page. Might throw TransactionAbortedException
+        lockManager.getLock(tid, pid, perm);
         HeapPage pg = (HeapPage) getPage(pid.hashCode()); // check if page is already in the pool
         if(pg != null) {
             logger.log("Page in buffer pool!");
@@ -216,6 +218,11 @@ public class BufferPool {
     public  void releasePage(TransactionId tid, PageId pid) {
         // some code goes here
         // not necessary for lab1|lab2
+        try {
+            lockManager.returnLock(tid, pid);
+        }catch (DbException e){
+            e.printStackTrace();
+        }
     }
 
     /**
@@ -232,7 +239,7 @@ public class BufferPool {
     public boolean holdsLock(TransactionId tid, PageId p) {
         // some code goes here
         // not necessary for lab1|lab2
-        return false;
+        return lockManager.holdsLock(tid, p);
     }
 
     /**
