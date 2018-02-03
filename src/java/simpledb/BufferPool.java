@@ -100,7 +100,7 @@ public class BufferPool {
     private List<Page> allPages;
     private LTM lockManager;
 
-    private DbLogger logger = new DbLogger(getClass().getName(), getClass().getName() + ".log", false);
+    private DbLogger logger = new DbLogger(getClass().getName(), getClass().getName() + ".log", true);
     /**
      * Creates a BufferPool that caches up to numPages pages.
      *
@@ -161,14 +161,6 @@ public class BufferPool {
     	BufferPool.pageSize = DEFAULT_PAGE_SIZE;
     }
 
-//    public synchronized Page createNewPageWithLock(TransactionId tid, PageId pid, Permissions perm)
-//            throws TransactionAbortedException, DbException, IOException {
-//        HeapPage newHeapPage = new HeapPage((HeapPageId) pid, HeapPage.createEmptyPageData());
-//        logger.log("newHeapPage ID: " + newHeapPage.getId());
-//        writePage(newHeapPage);
-//        lockManager.getLock(tid, pid, perm);
-//
-//    }
     public void lockPage(TransactionId tid, PageId pid, Permissions perm)
             throws TransactionAbortedException, DbException {
         lockManager.getLock(tid, pid, perm);
@@ -201,7 +193,7 @@ public class BufferPool {
             e.printStackTrace();
             throw new DbException("Can not get DbFile for table with ID: " + pid.getTableId());
         }
-        logger.log("----Try to read page in buffer pool: " + pid.hashCode() + "----");
+        logger.log("----Try to read page in buffer pool: " + pid + "----");
         // trying to get a lock on the page. Might throw TransactionAbortedException
         lockManager.getLock(tid, pid, perm);
         HeapPage pg = (HeapPage) getPage(pid.hashCode()); // check if page is already in the pool
@@ -209,12 +201,12 @@ public class BufferPool {
             logger.log("Page in buffer pool!");
             return pg;
         }
-        logger.log("Not in buffer pool");
+        logger.log("Not in buffer pool. So read page from the disk");
         // read page from the disk
         pg = (HeapPage) dbFile.readPage(pid);
         // store the newly read page into the buffer pool
         putPage(pid.hashCode(), pg);
-        logger.log("----End of read page in buffer pool----");
+        logger.log("----End of get page in buffer pool----");
         return pg;
     }
 

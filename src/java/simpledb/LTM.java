@@ -14,9 +14,9 @@ import java.util.concurrent.Semaphore;
     //
 public class LTM {
 
-    ConcurrentMap<PageId, PageState> lockTable;
-    Semaphore stateLock;
-
+    private ConcurrentMap<PageId, PageState> lockTable;
+    private Semaphore stateLock;
+    private DbLogger logger = new DbLogger(getClass().getName(), getClass().getName() + ".log", true);
     public LTM(){
         lockTable = new ConcurrentHashMap<>();
         stateLock = new Semaphore(1, true);
@@ -24,16 +24,19 @@ public class LTM {
 
     public void getLock(TransactionId tid, PageId pid, Permissions perm)
             throws TransactionAbortedException, DbException {
+        logger.log("In getLock(), transaction: " + tid + " trying to " +
+                "request " + (perm == Permissions.READ_ONLY ? "read " : "write ") + " lock on page " + pid);
         PageState ps;
         acquireStateLock();
         if(!lockTable.containsKey(pid)){
-            ps = new PageState();
+            ps = new PageState(pid);
             lockTable.put(pid, ps);
         }else{
             ps = lockTable.get(pid);
         }
         releaseStateLock();
         ps.lock(tid, perm);
+        logger.log("In getLock(), transaction: " + tid + " got lock");
     }
 
     public void returnLock(TransactionId tid, PageId pid)

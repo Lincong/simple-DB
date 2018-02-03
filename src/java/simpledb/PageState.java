@@ -29,22 +29,29 @@ class PageState {
 
         }
 
-        Map<TransactionId, TransactionThread> readingTransactions;
-        Map<TransactionId, TransactionThread> writingTransactions;
-        Semaphore stateLock;
-        ReadWriteLock rwLock;
-        private DbLogger logger = new DbLogger(getClass().getName(), getClass().getName() + ".log", false);
+        private Map<TransactionId, TransactionThread> readingTransactions;
+        private Map<TransactionId, TransactionThread> writingTransactions;
+        private Semaphore stateLock;
+        private ReadWriteLock rwLock;
+        private PageId pid;
+        private DbLogger logger = new DbLogger(getClass().getName(), getClass().getName() + ".log", true);
 
-        PageState(){
+        PageState(PageId pid){
             readingTransactions = new HashMap<>();
             writingTransactions = new HashMap<>();
             stateLock = new Semaphore(1, true);
             rwLock = new ReentrantReadWriteLock();
+            this.pid = pid;
         }
 
         public void lock(TransactionId tid, Permissions perm)
                 throws TransactionAbortedException, DbException {
             boolean requestingReadLock = (perm == Permissions.READ_ONLY);
+            logger.log("In lock(), transaction " + tid + " trying to request " +
+                    (requestingReadLock ? "read" : "write") +" lock on page " + pid);
+
+            logReadingTransactions();
+            logWritingTransactions();
             acquireStateLock();
             boolean hasReadLock = readingTransactions.containsKey(tid);
             boolean hasWriteLock = writingTransactions.containsKey(tid);
@@ -67,18 +74,23 @@ class PageState {
             releaseStateLock();
             try {
                 if (perm == Permissions.READ_ONLY) { // read lock
+                    logger.log("Trying to get read lock on page " + pid);
                     rwLock.readLock().lockInterruptibly();
 
                 } else { // write lock
                     if(hasReadLock){ // if transaction already has the reading lock
+                        logger.log("Already has the ready lock on " + pid +
+                        ". Trying to release it first");
                         unlock(tid);
                     }
+                    logger.log("Trying to get write lock on page " + pid);
                     rwLock.writeLock().lockInterruptibly();
 
                 }
                 // add the current lock request to the corresponding hash map
                 acquireStateLock();
                 TransactionThread tt = new TransactionThread(tid, Thread.currentThread());
+                logger.log("put the new transaction thread object into the map");
                 (perm == Permissions.READ_ONLY ? readingTransactions : writingTransactions).put(tid, tt);
                 releaseStateLock();
 
@@ -86,11 +98,17 @@ class PageState {
                 // if a thread is interrupted that means the transaction in this thread should abort
                 throw new TransactionAbortedException();
             }
+            logger.log("at the end end lock()");
+            logReadingTransactions();
+            logWritingTransactions();
+            logger.log("end of lock()");
         }
 
         public boolean unlock(TransactionId tid)
                 throws DbException {
-
+            logger.log("In unlock() for transaction " + tid + " on page " + pid);
+            logReadingTransactions();
+            logWritingTransactions();
             acquireStateLock();
             boolean hasReadLock = readingTransactions.containsKey(tid);
             boolean hasWriteLock = writingTransactions.containsKey(tid);
@@ -113,6 +131,9 @@ class PageState {
             }
             boolean hasLock = (readingTransactions.isEmpty() && writingTransactions.isEmpty());
             releaseStateLock();
+            logReadingTransactions();
+            logWritingTransactions();
+            logger.log("end of unlock() for transaction " + tid + " on page " + pid);
             return hasLock;
         }
 
@@ -122,6 +143,20 @@ class PageState {
                                 || writingTransactions.containsKey(tid));
             releaseStateLock();
             return holdingLock;
+        }
+
+        private void logReadingTransactions(){
+            logger.log("--Transactions holding read lock:--");
+            for(TransactionId tid : readingTransactions.keySet())
+                logger.log("transaction: " + tid);
+            logger.log("--end--");
+        }
+
+        private void logWritingTransactions(){
+            logger.log("--Transactions holding write lock:--");
+            for(TransactionId tid : writingTransactions.keySet())
+                logger.log("transaction: " + tid);
+            logger.log("--end--");
         }
 
         private void acquireStateLock(){

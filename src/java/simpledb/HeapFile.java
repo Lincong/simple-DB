@@ -32,7 +32,7 @@ public class HeapFile implements DbFile {
     private TupleDesc td;
     private int ID;
     private BufferPool bufferPool;
-    private DbLogger logger = new DbLogger(getClass().getName(), getClass().getName() + ".log", false);
+    private DbLogger logger = new DbLogger(getClass().getName(), getClass().getName() + ".log", true);
     private Semaphore synchronizer = new Semaphore(1, true);
 
     public HeapFile(File f, TupleDesc td) {
@@ -152,7 +152,7 @@ public class HeapFile implements DbFile {
     }
 
     private HeapPage getFreePage(TransactionId tid) throws TransactionAbortedException, DbException {
-
+        logger.log("Trying to find a free page for transaction " + tid);
         for (int i = 0; i < this.numPages(); i++) {
             PageId pid = new HeapPageId(this.getId(), i);
             HeapPage hpage = (HeapPage) Database.getBufferPool().getPage(tid, pid, Permissions.READ_WRITE);
@@ -168,6 +168,7 @@ public class HeapFile implements DbFile {
     public ArrayList<Page> insertTuple(TransactionId tid, Tuple t)
             throws DbException, IOException, TransactionAbortedException {
         // some code goes here
+        logger.log("In HeapFile insertTuple() ");
         HeapPage p = getFreePage(tid);
         if (p != null) {
             // check the
