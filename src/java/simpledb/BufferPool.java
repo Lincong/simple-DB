@@ -51,6 +51,8 @@ public class BufferPool {
         public Set<Integer> keySet(){
             return m.keySet();
         }
+
+        public Set<Map.Entry<Integer, Page>> entrySet() {return m.entrySet();}
     }
 
     private int maxNumPages;
@@ -243,7 +245,6 @@ public class BufferPool {
         ArrayList<Page> modifiedPages = databaseFile.insertTuple(tid, t);
         logger.log("modifiedPages size: " + modifiedPages.size());
         for (Page page : modifiedPages) {
-//            page.markDirty(true, tid);
             putPage(page.getId().hashCode(), (HeapPage) page);
         }
     }
@@ -327,8 +328,20 @@ public class BufferPool {
     private synchronized  void evictPage() throws DbException {
         // some code goes here
         // not necessary for lab1
-        int k = m.keySet().iterator().next();
-        Page pageToEvict = m.get(k);
+//        int k = m.keySet().iterator().next();
+        Page pageToEvict = null;
+        int k = 0;
+        Set<Map.Entry<Integer, Page>> pages = m.entrySet();
+        for(Map.Entry<Integer, Page> e : pages){
+            if(e.getValue().isDirty() == null){
+                pageToEvict = e.getValue();
+                k = e.getKey();
+                break;
+            }
+        }
+        if(pageToEvict == null)
+            throw new DbException("all pages in the buffer pool are dirty");
+
         try{
             flushPage(pageToEvict.getId());
         }catch (IOException e){
