@@ -16,7 +16,7 @@ public class LTM {
 
     private ConcurrentMap<PageId, PageState> lockTable;
     private Semaphore stateLock;
-    private DbLogger logger = new DbLogger(getClass().getName(), getClass().getName() + ".log", true);
+    private DbLogger logger = new DbLogger(getClass().getName(), getClass().getName() + ".log", false);
     public LTM(){
         lockTable = new ConcurrentHashMap<>();
         stateLock = new Semaphore(1, true);

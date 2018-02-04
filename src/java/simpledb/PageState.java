@@ -9,32 +9,80 @@ import java.util.concurrent.Semaphore;
 
 class PageState {
 
+
+        // allows one transaction to hold both read and write lock
         class RWlock{
 
             Semaphore permits;
+            Semaphore syncPermit;
+            int totalPermitsNum = Integer.MAX_VALUE;
+            boolean holdsRWLocks;
 
             public RWlock(){
-                permits = new Semaphore(Integer.MAX_VALUE, true);
+                permits = new Semaphore(totalPermitsNum, true);
+                syncPermit = new Semaphore(1, true);
+                holdsRWLocks = false;
             }
 
             public void getReadLock() throws InterruptedException {
-                permits.acquire();
+                getReadLock(false);
             }
 
+            public void getReadLock(boolean holdWriteLock) throws InterruptedException {
+                start();
+                if(holdWriteLock){
+                    holdsRWLocks = true;
+                    end();
+                } else {
+                    end();
+                    permits.acquire();
+                }
+            }
+            // upgrade from read lock to write lock and assuming we already have the read lock
             public void upgradeLock() throws InterruptedException {
                 permits.acquire(Integer.MAX_VALUE-1);
+                holdsRWLocks = true;
             }
 
             public void returnReadLock() {
-                permits.release();
+                startUninterruptable();
+                if(holdsRWLocks){
+                    holdsRWLocks = false;
+
+                } else {
+                    permits.release();
+                }
+                end();
             }
 
+            // if the read lock is already held. upgradeLock() should be called instead
             public void getWriteLock() throws InterruptedException {
                 permits.acquire(Integer.MAX_VALUE);
+                holdsRWLocks = true;
             }
 
-            public void returnWriteLock(){
-                permits.release(Integer.MAX_VALUE);
+            public void returnWriteLock() {
+                startUninterruptable();
+                if(holdsRWLocks) {
+                    permits.release(Integer.MAX_VALUE - 1);
+                    holdsRWLocks = false;
+
+                }else{
+                    permits.release(Integer.MAX_VALUE);
+                }
+                end();
+            }
+
+            private void start() throws InterruptedException {
+                syncPermit.acquire();
+            }
+
+            private void startUninterruptable() {
+                syncPermit.acquireUninterruptibly();
+            }
+
+            private void end(){
+                syncPermit.release();
             }
         }
 
@@ -65,7 +113,7 @@ class PageState {
         private Semaphore stateLock;
         private RWlock rwLock;
         private PageId pid;
-        private DbLogger logger = new DbLogger(getClass().getName(), getClass().getName() + ".log", true);
+        private DbLogger logger = new DbLogger(getClass().getName(), getClass().getName() + ".log", false);
 
         PageState(PageId pid){
             readingTransactions = new HashMap<>();
@@ -102,7 +150,11 @@ class PageState {
             try {
                 if(perm == Permissions.READ_ONLY) { // read lock
                     logger.log("Trying to get read lock on page " + pid);
-                     rwLock.getReadLock();
+                    if(hasWriteLock){ // transaction already has write lock
+                        rwLock.getReadLock(true);
+                    }else {
+                        rwLock.getReadLock();
+                    }
                 } else { // write lock
                     if(hasReadLock){ // if transaction already has the reading lock
                         logger.log("Already has the ready lock on " + pid +
@@ -141,10 +193,7 @@ class PageState {
             boolean hasWriteLock = writingTransactions.containsKey(tid);
             logger.log("hasWriteLock: " + hasWriteLock);
             logger.log("current thread: " + Thread.currentThread());
-            if(hasReadLock && hasWriteLock) {
-                releaseStateLock();
-                throw new DbException("How can " + tid + " have both r/w lock?");
-            }
+
             if((!hasWriteLock) && (!hasReadLock)) {
                 releaseStateLock();
                 throw new DbException("No lock for " + tid + " on this page");
@@ -153,8 +202,9 @@ class PageState {
                 logger.log("Trying to unlock read lock");
                 rwLock.returnReadLock();
                 readingTransactions.remove(tid);
+            }
 
-            }else{
+            if(hasWriteLock){
                 logger.log("Trying to unlock write lock");
                 rwLock.returnWriteLock();
                 writingTransactions.remove(tid);

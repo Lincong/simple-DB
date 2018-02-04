@@ -32,7 +32,7 @@ public class HeapFile implements DbFile {
     private TupleDesc td;
     private int ID;
     private BufferPool bufferPool;
-    private DbLogger logger = new DbLogger(getClass().getName(), getClass().getName() + ".log", true);
+    private DbLogger logger = new DbLogger(getClass().getName(), getClass().getName() + ".log", false);
     private Semaphore synchronizer = new Semaphore(1, true);
 
     public HeapFile(File f, TupleDesc td) {

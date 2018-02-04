@@ -60,7 +60,7 @@ public class BufferPool {
     private List<Page> allPages;
     private LTM lockManager;
 
-    private DbLogger logger = new DbLogger(getClass().getName(), getClass().getName() + ".log", true);
+    private DbLogger logger = new DbLogger(getClass().getName(), getClass().getName() + ".log", false);
     /**
      * Creates a BufferPool that caches up to numPages pages.
      *
