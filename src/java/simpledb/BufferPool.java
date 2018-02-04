@@ -53,46 +53,6 @@ public class BufferPool {
         }
     }
 
-//    class LRUPool <T> {
-//        int remainingPairNum;
-//        Map<Integer, T> m;
-//
-//        public LRUPool(int capacity) {
-//            this.remainingPairNum = capacity;
-//            this.m = new LinkedHashMap<>(remainingPairNum, 0.75f, true);
-//        }
-//
-//        public T getPage(int pageHashCode) {
-//            if(!m.containsKey(pageHashCode)) return null;
-//            return m.get(pageHashCode);
-//        }
-//
-//        public void putPage(int pageHashCode, T page) throws DbException {
-//            logger.log("In putPage, remaining capacity is: " + this.remainingPairNum);
-//            logger.log("Trying to cache page: " + pageHashCode);
-//            if (this.remainingPairNum < 0)
-//                throw new DbException("Buffer pool is full!");
-//            boolean hasKey = this.m.containsKey(pageHashCode);
-//            this.m.put(pageHashCode, page);
-//            if(!hasKey){
-//                logger.log("Page not in buffer pool");
-//                this.remainingPairNum--;
-//
-//                while (this.remainingPairNum < 0) {
-//                    logger.log("Remove page from buffer pool");
-//                    evictPage(); // remove the page from the buffer pool
-//                }
-//            }
-//        }
-//
-//        public List<T> getAllPages(){
-//            List<T> allPages = new ArrayList<>();
-//            for(int key : m.keySet())
-//                allPages.add(m.get(key));
-//            return allPages;
-//        }
-//    }
-
     private int maxNumPages;
     private int remainingPairNum;
 //    private Map<Integer, Page> m;
@@ -123,7 +83,7 @@ public class BufferPool {
 
     public void putPage(int pageHashCode, Page page) throws DbException {
         logger.log("In putPage, remaining capacity is: " + this.remainingPairNum);
-        logger.log("Trying to cache page: " + pageHashCode);
+        logger.log("Trying to cache page: " + page.getId());
         if (this.remainingPairNum < 0)
             throw new DbException("Buffer pool is full!");
         boolean hasKey = m.containsKey(pageHashCode);
@@ -193,7 +153,8 @@ public class BufferPool {
             e.printStackTrace();
             throw new DbException("Can not get DbFile for table with ID: " + pid.getTableId());
         }
-        logger.log("----Try to read page in buffer pool: " + pid + "----");
+        logger.log("--Transaction" + tid + " trying to read page in buffer pool: " + pid + "----");
+        logger.log("with " + (perm == Permissions.READ_ONLY ? " read " : " write ") + "lock");
         // trying to get a lock on the page. Might throw TransactionAbortedException
         lockManager.getLock(tid, pid, perm);
         HeapPage pg = (HeapPage) getPage(pid.hashCode()); // check if page is already in the pool
@@ -221,12 +182,14 @@ public class BufferPool {
      */
     public void releasePage(TransactionId tid, PageId pid) {
         // some code goes here
+        logger.log("Transaction " + tid + " trying to release page " + pid);
         try {
             lockManager.returnLock(tid, pid);
         } catch (DbException e){
             e.printStackTrace();
             System.exit(1);
         }
+        logger.log("end of releasePage()");
     }
 
     /**

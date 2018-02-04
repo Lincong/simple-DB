@@ -153,8 +153,16 @@ public class HeapFile implements DbFile {
 
     private HeapPage getFreePage(TransactionId tid) throws TransactionAbortedException, DbException {
         logger.log("Trying to find a free page for transaction " + tid);
-        for (int i = 0; i < this.numPages(); i++) {
+        int totalPageNum = this.numPages();
+        logger.log("totalPageNum: " + totalPageNum);
+        if(totalPageNum == 0){
+            logger.log("no page yet");
+            return null;
+        }
+        for (int i = 0; i < totalPageNum; i++) {
+            logger.log("i: " + i);
             PageId pid = new HeapPageId(this.getId(), i);
+            logger.log("current pageID " + pid);
             HeapPage hpage = (HeapPage) Database.getBufferPool().getPage(tid, pid, Permissions.READ_WRITE);
             if (hpage.getNumEmptySlots() > 0)
                 return hpage;
@@ -169,13 +177,18 @@ public class HeapFile implements DbFile {
             throws DbException, IOException, TransactionAbortedException {
         // some code goes here
         logger.log("In HeapFile insertTuple() ");
+        logger.log("tid: " + tid);
+        logger.log("tuple to insert " + t);
         HeapPage p = getFreePage(tid);
         if (p != null) {
+            logger.log("found available page to insert");
+            logger.log("insert to page: " + p.getId());
             // check the
             RecordId rid = new RecordId(p.getId(), -1);
             t.setRecordId(rid);
             p.insertTuple(t);
             p.markDirty(true, tid);
+            logger.log("end of insertTUple()");
             return new ArrayList<> (Arrays.asList(p));
         }
         // no empty pages found, so create a new one
@@ -197,6 +210,7 @@ public class HeapFile implements DbFile {
         } finally {
             synchronizerOff();
         }
+        logger.log("end of insertTUple()");
         return new ArrayList<> (Arrays.asList());
     }
 

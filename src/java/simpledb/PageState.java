@@ -57,23 +57,29 @@ class PageState {
             boolean hasWriteLock = writingTransactions.containsKey(tid);
             // make sure one transaction only has at most one lock
             assert !(hasReadLock && hasWriteLock);
-            if(hasWriteLock){
+            if((requestingReadLock && hasReadLock) || ((!requestingReadLock) && hasWriteLock)){
+                logger.log("already has the lock");
                 releaseStateLock();
-                throw new DbException("transaction " + tid + " is requesting a write lock but it already has the lock");
+                return;
             }
+
+//            if(hasWriteLock){
+//                releaseStateLock();
+//                throw new DbException("transaction " + tid + " is requesting a write lock but it already has the lock");
+//            }
 
             // TODO: check if there is any transaction that needs to be aborted
             // check request redundant lock
-            if(hasReadLock && requestingReadLock){
-                releaseStateLock();
-                throw new DbException("transaction " + tid + " is requesting read lock but it already has the lock");
-            }
+//            if(hasReadLock && requestingReadLock){
+//                releaseStateLock();
+//                throw new DbException("transaction " + tid + " is requesting read lock but it already has the lock");
+//            }
             // only 2 cases are allowed
             // 1. read lock -> write lock
             // 2. no lock   -> r/w lock
             releaseStateLock();
             try {
-                if (perm == Permissions.READ_ONLY) { // read lock
+                if(perm == Permissions.READ_ONLY) { // read lock
                     logger.log("Trying to get read lock on page " + pid);
                     rwLock.readLock().lockInterruptibly();
 
