@@ -6,10 +6,37 @@ package simpledb;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.Semaphore;
-import java.util.concurrent.locks.ReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 class PageState {
+
+        class RWlock{
+
+            Semaphore permits;
+
+            public RWlock(){
+                permits = new Semaphore(Integer.MAX_VALUE, true);
+            }
+
+            public void getReadLock() throws InterruptedException {
+                permits.acquire();
+            }
+
+            public void upgradeLock() throws InterruptedException {
+                permits.acquire(Integer.MAX_VALUE-1);
+            }
+
+            public void returnReadLock() {
+                permits.release();
+            }
+
+            public void getWriteLock() throws InterruptedException {
+                permits.acquire(Integer.MAX_VALUE);
+            }
+
+            public void returnWriteLock(){
+                permits.release(Integer.MAX_VALUE);
+            }
+        }
 
         class TransactionThread{
             TransactionId tid;
@@ -23,16 +50,20 @@ class PageState {
             public boolean isTransaction(TransactionId tid){
                 return this.tid.equals(tid);
             }
+
             public void interruptTransactionThread(){
                 thread.interrupt();
             }
 
+            public void logThread(){
+                logger.log("thread: " + thread);
+            }
         }
 
         private Map<TransactionId, TransactionThread> readingTransactions;
         private Map<TransactionId, TransactionThread> writingTransactions;
         private Semaphore stateLock;
-        private ReadWriteLock rwLock;
+        private RWlock rwLock;
         private PageId pid;
         private DbLogger logger = new DbLogger(getClass().getName(), getClass().getName() + ".log", true);
 
@@ -40,7 +71,7 @@ class PageState {
             readingTransactions = new HashMap<>();
             writingTransactions = new HashMap<>();
             stateLock = new Semaphore(1, true);
-            rwLock = new ReentrantReadWriteLock();
+            rwLock = new RWlock();
             this.pid = pid;
         }
 
@@ -56,24 +87,14 @@ class PageState {
             boolean hasReadLock = readingTransactions.containsKey(tid);
             boolean hasWriteLock = writingTransactions.containsKey(tid);
             // make sure one transaction only has at most one lock
-            assert !(hasReadLock && hasWriteLock);
             if((requestingReadLock && hasReadLock) || ((!requestingReadLock) && hasWriteLock)){
                 logger.log("already has the lock");
                 releaseStateLock();
                 return;
             }
 
-//            if(hasWriteLock){
-//                releaseStateLock();
-//                throw new DbException("transaction " + tid + " is requesting a write lock but it already has the lock");
-//            }
-
             // TODO: check if there is any transaction that needs to be aborted
-            // check request redundant lock
-//            if(hasReadLock && requestingReadLock){
-//                releaseStateLock();
-//                throw new DbException("transaction " + tid + " is requesting read lock but it already has the lock");
-//            }
+
             // only 2 cases are allowed
             // 1. read lock -> write lock
             // 2. no lock   -> r/w lock
@@ -81,17 +102,16 @@ class PageState {
             try {
                 if(perm == Permissions.READ_ONLY) { // read lock
                     logger.log("Trying to get read lock on page " + pid);
-                    rwLock.readLock().lockInterruptibly();
-
+                     rwLock.getReadLock();
                 } else { // write lock
                     if(hasReadLock){ // if transaction already has the reading lock
                         logger.log("Already has the ready lock on " + pid +
-                        ". Trying to release it first");
-                        unlock(tid);
+                        ". Trying to upgrade it");
+                        rwLock.upgradeLock();
+                    } else {
+                        logger.log("Trying to get write lock on page " + pid);
+                        rwLock.getWriteLock();
                     }
-                    logger.log("Trying to get write lock on page " + pid);
-                    rwLock.writeLock().lockInterruptibly();
-
                 }
                 // add the current lock request to the corresponding hash map
                 acquireStateLock();
@@ -117,7 +137,10 @@ class PageState {
             logWritingTransactions();
             acquireStateLock();
             boolean hasReadLock = readingTransactions.containsKey(tid);
+            logger.log("hasReadLock: " + hasReadLock);
             boolean hasWriteLock = writingTransactions.containsKey(tid);
+            logger.log("hasWriteLock: " + hasWriteLock);
+            logger.log("current thread: " + Thread.currentThread());
             if(hasReadLock && hasWriteLock) {
                 releaseStateLock();
                 throw new DbException("How can " + tid + " have both r/w lock?");
@@ -126,13 +149,14 @@ class PageState {
                 releaseStateLock();
                 throw new DbException("No lock for " + tid + " on this page");
             }
-
             if(hasReadLock){
-                rwLock.readLock().unlock();
+                logger.log("Trying to unlock read lock");
+                rwLock.returnReadLock();
                 readingTransactions.remove(tid);
 
             }else{
-                rwLock.writeLock().unlock();
+                logger.log("Trying to unlock write lock");
+                rwLock.returnWriteLock();
                 writingTransactions.remove(tid);
             }
             boolean hasLock = (readingTransactions.isEmpty() && writingTransactions.isEmpty());
@@ -153,15 +177,19 @@ class PageState {
 
         private void logReadingTransactions(){
             logger.log("--Transactions holding read lock:--");
-            for(TransactionId tid : readingTransactions.keySet())
+            for(TransactionId tid : readingTransactions.keySet()) {
                 logger.log("transaction: " + tid);
+                readingTransactions.get(tid).logThread();
+            }
             logger.log("--end--");
         }
 
         private void logWritingTransactions(){
             logger.log("--Transactions holding write lock:--");
-            for(TransactionId tid : writingTransactions.keySet())
+            for(TransactionId tid : writingTransactions.keySet()) {
                 logger.log("transaction: " + tid);
+                writingTransactions.get(tid).logThread();
+            }
             logger.log("--end--");
         }
 
