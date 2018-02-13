@@ -57,11 +57,11 @@ public class BufferPool {
 
     private int maxNumPages;
     private int remainingPairNum;
-//    private Map<Integer, Page> m;
     private Pool m;
     private List<Page> allPages;
     private LTM lockManager;
-
+    // a map keeping track of which pages a transaction has touched
+    private Map<TransactionId, Set<PageId>> transactionPageRecords;
     private DbLogger logger = new DbLogger(getClass().getName(), getClass().getName() + ".log", false);
     /**
      * Creates a BufferPool that caches up to numPages pages.
@@ -76,6 +76,7 @@ public class BufferPool {
         m = new Pool(remainingPairNum);
         allPages = new LinkedList<>();
         lockManager = new LTM();
+        transactionPageRecords = new HashMap<>();
     }
 
     public Page getPage(int pageHashCode) {
@@ -159,6 +160,14 @@ public class BufferPool {
         logger.log("with " + (perm == Permissions.READ_ONLY ? " read " : " write ") + "lock");
         // trying to get a lock on the page. Might throw TransactionAbortedException
         lockManager.getLock(tid, pid, perm);
+        Set<PageId> allPids;
+        if(!transactionPageRecords.containsKey(tid)){
+            allPids = new HashSet<>();
+        }else{
+            allPids = transactionPageRecords.get(tid);
+        }
+        allPids.add(pid);
+        transactionPageRecords.put(tid, allPids);
         HeapPage pg = (HeapPage) getPage(pid.hashCode()); // check if page is already in the pool
         if(pg != null) {
             logger.log("Page in buffer pool!");
@@ -202,6 +211,7 @@ public class BufferPool {
     public void transactionComplete(TransactionId tid) throws IOException {
         // some code goes here
         // not necessary for lab1|lab2
+        transactionComplete(tid, true);
     }
 
     /** Return true if the specified transaction has a lock on the specified page */
@@ -220,8 +230,31 @@ public class BufferPool {
      */
     public void transactionComplete(TransactionId tid, boolean commit)
         throws IOException {
-        // some code goes here
-        // not necessary for lab1|lab2
+        //release BufferPool states related to transaction, release locks
+        //commit: flush transaction pages
+        //abort: revert changes
+        logger.log("In transactionComplete() and trying to release all locks transaction " + tid + " holds");
+        releaseAllLocks(tid);
+        logger.log("done");
+        Set<PageId> pids = transactionPageRecords.get(tid);
+        for(PageId pid : pids){
+            Page p = getPage(pid.hashCode());
+            assert p != null;
+            if(p.isDirty() == null || (!p.isDirty().equals(tid)))
+                continue;
+            // for a dirty page
+            if(commit){
+                flushPage(pid);
+            }else{ // revert
+                p.getBeforeImage();
+            }
+        }
+    }
+
+    private void releaseAllLocks(TransactionId tid){
+        Set<PageId> pids = transactionPageRecords.get(tid);
+        for(PageId pid : pids)
+            releasePage(tid, pid);
     }
 
     /**
@@ -301,7 +334,7 @@ public class BufferPool {
      * Flushes a certain page to disk
      * @param pid an ID indicating the page to flush
      */
-    private synchronized  void flushPage(PageId pid) throws IOException {
+    private synchronized void flushPage(PageId pid) throws IOException {
         // some code goes here
         // not necessary for lab1
         Page pageToFlush = getPage(pid.hashCode());
