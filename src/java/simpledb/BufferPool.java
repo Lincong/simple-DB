@@ -237,6 +237,7 @@ public class BufferPool {
         releaseAllLocks(tid);
         logger.log("done");
         Set<PageId> pids = transactionPageRecords.get(tid);
+        transactionPageRecords.remove(tid);
         for(PageId pid : pids){
             Page p = getPage(pid.hashCode());
             assert p != null;
@@ -244,9 +245,11 @@ public class BufferPool {
                 continue;
             // for a dirty page
             if(commit){
-                flushPage(pid);
+                flushPage(pid); // flushPage already mark page as not dirty
             }else{ // revert
-                p.getBeforeImage();
+                p = p.getBeforeImage();
+                p.markDirty(false, tid);
+                m.put(pid.hashCode(), p.getBeforeImage());
             }
         }
     }
@@ -339,8 +342,7 @@ public class BufferPool {
         // not necessary for lab1
         Page pageToFlush = getPage(pid.hashCode());
         TransactionId dirtyTransactionId = pageToFlush.isDirty();
-        if (dirtyTransactionId != null)
-        {
+        if (dirtyTransactionId != null){
             HeapFile databaseFile = (HeapFile) Database.getCatalog().getDatabaseFile(pid.getTableId());
             databaseFile.writePage(pageToFlush);
             pageToFlush.markDirty(false, dirtyTransactionId);
