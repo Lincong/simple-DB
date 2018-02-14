@@ -129,8 +129,8 @@ class PageState {
             logger.log("In lock(), transaction " + tid + " trying to request " +
                     (requestingReadLock ? "read" : "write") +" lock on page " + pid);
 
-            logReadingTransactions();
-            logWritingTransactions();
+//            logReadingTransactions();
+//            logWritingTransactions();
             acquireStateLock();
             boolean hasReadLock = readingTransactions.containsKey(tid);
             boolean hasWriteLock = writingTransactions.containsKey(tid);
@@ -154,7 +154,6 @@ class PageState {
                 for(TransactionId transId : readingTransactions.keySet()){
                     if(tid.getId() > transId.getId()) {
                         logger.log("Transaction " + tid + " aborts since " + transId + " is older than it");
-                        logger.log("since ");
                         releaseStateLock();
                         throw new TransactionAbortedException();
                     }
@@ -175,7 +174,7 @@ class PageState {
                     }
                 } else { // write lock
                     if(hasReadLock){ // if transaction already has the reading lock
-                        logger.log("Already has the ready lock on " + pid +
+                        logger.log("Already has the read lock on " + pid +
                         ". Trying to upgrade it");
                         rwLock.upgradeLock();
                     } else {
@@ -195,16 +194,16 @@ class PageState {
                 throw new TransactionAbortedException();
             }
             logger.log("at the end end lock()");
-            logReadingTransactions();
-            logWritingTransactions();
+//            logReadingTransactions();
+//            logWritingTransactions();
             logger.log("end of lock()");
         }
 
         public boolean unlock(TransactionId tid)
                 throws DbException {
             logger.log("In unlock() for transaction " + tid + " on page " + pid);
-            logReadingTransactions();
-            logWritingTransactions();
+//            logReadingTransactions();
+//            logWritingTransactions();
             acquireStateLock();
             boolean hasReadLock = readingTransactions.containsKey(tid);
             logger.log("hasReadLock: " + hasReadLock);
@@ -229,8 +228,8 @@ class PageState {
             }
             boolean hasLock = (readingTransactions.isEmpty() && writingTransactions.isEmpty());
             releaseStateLock();
-            logReadingTransactions();
-            logWritingTransactions();
+//            logReadingTransactions();
+//            logWritingTransactions();
             logger.log("end of unlock() for transaction " + tid + " on page " + pid);
             return hasLock;
         }

@@ -42,7 +42,9 @@ public class LTM {
     public void returnLock(TransactionId tid, PageId pid)
             throws DbException {
         acquireStateLock();
+        logger.log("In returnLock(), transaction: " + tid + " returns lock for page: " + pid);
         if(!lockTable.containsKey(pid)){
+            logger.log("Transaction " + tid + " has no lock for page " + pid);
             releaseStateLock();
             throw new DbException("No lock for page " + pid);
         }
@@ -53,6 +55,7 @@ public class LTM {
             lockTable.remove(pid);
             releaseStateLock();
         }
+        logger.log("In returnLock(), transaction: " + tid + " returns lock for page: " + pid + " done");
     }
 
     public boolean isPageLock(PageId pid){
