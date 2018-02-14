@@ -2,6 +2,7 @@ package simpledb;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * BufferPool manages the reading and writing of pages into memory from
@@ -61,7 +62,7 @@ public class BufferPool {
     private List<Page> allPages;
     private LTM lockManager;
     // a map keeping track of which pages a transaction has touched
-    private Map<TransactionId, Set<PageId>> transactionPageRecords;
+    private volatile Map<TransactionId, Set<PageId>> transactionPageRecords;
     private DbLogger logger = new DbLogger(getClass().getName(), getClass().getName() + ".log", false);
     /**
      * Creates a BufferPool that caches up to numPages pages.
@@ -76,7 +77,7 @@ public class BufferPool {
         m = new Pool(remainingPairNum);
         allPages = new LinkedList<>();
         lockManager = new LTM();
-        transactionPageRecords = new HashMap<>();
+        transactionPageRecords = new ConcurrentHashMap<>();
     }
 
     public Page getPage(int pageHashCode) {
@@ -270,7 +271,7 @@ public class BufferPool {
     }
 
     private void releaseAllLocks(TransactionId tid){
-        Set<PageId> pids = transactionPageRecords.get(tid);
+        Set<PageId> pids = new HashSet<>(transactionPageRecords.get(tid));
         for(PageId pid : pids)
             releasePage(tid, pid);
         transactionPageRecords.remove(tid);
