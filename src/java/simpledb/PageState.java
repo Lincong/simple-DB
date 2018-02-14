@@ -142,17 +142,35 @@ class PageState {
             }
 
             // TODO: check if there is any transaction that needs to be aborted
+            // Wait-die scheme: It is a non-preemptive technique for deadlock prevention
+            for(TransactionId transId : writingTransactions.keySet()){
+                if(tid.getId() > transId.getId()) {
+                    logger.log("Transaction " + tid + " aborts since " + transId + " is older than it");
+                    releaseStateLock();
+                    throw new TransactionAbortedException();
+                }
+            }
+            if(!requestingReadLock){
+                for(TransactionId transId : readingTransactions.keySet()){
+                    if(tid.getId() > transId.getId()) {
+                        logger.log("Transaction " + tid + " aborts since " + transId + " is older than it");
+                        logger.log("since ");
+                        releaseStateLock();
+                        throw new TransactionAbortedException();
+                    }
+                }
+            }
 
             // only 2 cases are allowed
             // 1. read lock -> write lock
             // 2. no lock   -> r/w lock
             releaseStateLock();
             try {
-                if(perm == Permissions.READ_ONLY) { // read lock
+                if(requestingReadLock) { // read lock
                     logger.log("Trying to get read lock on page " + pid);
                     if(hasWriteLock){ // transaction already has write lock
                         rwLock.getReadLock(true);
-                    }else {
+                    } else {
                         rwLock.getReadLock();
                     }
                 } else { // write lock
