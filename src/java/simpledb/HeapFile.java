@@ -197,16 +197,12 @@ public class HeapFile implements DbFile {
         HeapPageId newHeapPageId = new HeapPageId(this.getId(), newPageNum);
         BufferPool bpool = Database.getBufferPool();
         try {
-            if (newPageNum < this.numPages()) { // page has been allocated
-                bpool.getPage(tid, newHeapPageId, Permissions.READ_WRITE);
-
-            } else {
-                HeapPage newHeapPage = new HeapPage(newHeapPageId, HeapPage.createEmptyPageData());
-                logger.log("newHeapPage ID: " + newHeapPage.getId());
-                writePage(newHeapPage);
-                bpool.lockPage(tid, newHeapPageId, Permissions.READ_WRITE);
-                bpool.putPage(newHeapPageId.hashCode(), newHeapPage);
-            }
+            p = new HeapPage(newHeapPageId, HeapPage.createEmptyPageData());
+            p.insertTuple(t);
+            logger.log("newHeapPage ID: " + p.getId());
+            writePage(p);
+            bpool.lockPage(tid, newHeapPageId, Permissions.READ_WRITE);
+            bpool.putPage(newHeapPageId.hashCode(), p);
         } finally {
             synchronizerOff();
         }
