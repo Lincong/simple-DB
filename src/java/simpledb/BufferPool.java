@@ -61,9 +61,10 @@ public class BufferPool {
     private Pool m;
     private List<Page> allPages;
     private LTM lockManager;
+    private String readingPageSynchronizer;
     // a map keeping track of which pages a transaction has touched
     private volatile Map<TransactionId, Set<PageId>> transactionPageRecords;
-    private DbLogger logger = new DbLogger(getClass().getName(), getClass().getName() + ".log", false);
+    private DbLogger logger = new DbLogger(getClass().getName(), getClass().getName() + ".log", true);
     /**
      * Creates a BufferPool that caches up to numPages pages.
      *
@@ -78,6 +79,7 @@ public class BufferPool {
         allPages = new LinkedList<>();
         lockManager = new LTM();
         transactionPageRecords = new ConcurrentHashMap<>();
+        readingPageSynchronizer = " ";
     }
 
     public Page getPage(int pageHashCode) {
@@ -174,13 +176,21 @@ public class BufferPool {
             logger.log("Page in buffer pool!");
             return pg;
         }
-        logger.log("Not in buffer pool. So read page from the disk");
-        // read page from the disk
-        pg = (HeapPage) dbFile.readPage(pid);
-        // store the newly read page into the buffer pool
-        putPage(pid.hashCode(), pg);
-        logger.log("----End of get page in buffer pool----");
-        return pg;
+        logger.log("Not in buffer pool.");
+        synchronized (readingPageSynchronizer) {
+            pg = (HeapPage) getPage(pid.hashCode());
+            if(pg != null) {
+                logger.log("Page is read in buffer pool by some other thread!");
+                return pg;
+            }
+            logger.log("Read page from the disk");
+            // read page from the disk
+            pg = (HeapPage) dbFile.readPage(pid);
+            // store the newly read page into the buffer pool
+            putPage(pid.hashCode(), pg);
+            logger.log("----End of get page in buffer pool----");
+            return pg;
+        }
     }
 
     /**

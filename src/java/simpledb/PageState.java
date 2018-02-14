@@ -113,7 +113,7 @@ class PageState {
         private Semaphore stateLock;
         private RWlock rwLock;
         private PageId pid;
-        private DbLogger logger = new DbLogger(getClass().getName(), getClass().getName() + ".log", false);
+        private DbLogger logger = new DbLogger(getClass().getName(), getClass().getName() + ".log", true);
 
         PageState(PageId pid){
             readingTransactions = new HashMap<>();

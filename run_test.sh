@@ -31,6 +31,8 @@ run_system_test AggregateTest
 run_unit_test HeapPageWriteTest
 run_unit_test HeapFileWriteTest
 run_unit_test InsertTest
+run_unit_test TransactionTest
 run_system_test InsertTest
 run_system_test DeleteTest
 run_system_test EvictionTest
+run_system_test TransactionTest
