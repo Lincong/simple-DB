@@ -62,7 +62,7 @@ public class BufferPool {
     private LTM lockManager;
     // a map keeping track of which pages a transaction has touched
     private Map<TransactionId, Set<PageId>> transactionPageRecords;
-    private DbLogger logger = new DbLogger(getClass().getName(), getClass().getName() + ".log", true);
+    private DbLogger logger = new DbLogger(getClass().getName(), getClass().getName() + ".log", false);
     /**
      * Creates a BufferPool that caches up to numPages pages.
      *

@@ -291,7 +291,8 @@ class HeapFileIterator extends AbstractDbFileIterator {
 
         } else {
             // release the lock on the current page before get a new page from the buffer pool
-            Database.getBufferPool().releasePage(tid, currPage.getId());
+            if(currPage.isDirty() == null)
+                Database.getBufferPool().releasePage(tid, currPage.getId());
             if(!getIteratorForNextPage()) // no next tuple to read (maybe)
                 return null;
             t = (pageIterator.hasNext() ? pageIterator.next() : null);
@@ -300,7 +301,7 @@ class HeapFileIterator extends AbstractDbFileIterator {
     }
 
     private boolean getIteratorForNextPage() throws DbException, TransactionAbortedException {
-        if (currPageNum >= totalPageNum)
+        if(currPageNum >= totalPageNum)
             return false;
         HeapPageId pageToReadID = new HeapPageId(heapFile.getId(), currPageNum);
         currPage = (HeapPage) bufferPool.getPage(tid, pageToReadID, Permissions.READ_ONLY);
@@ -312,7 +313,8 @@ class HeapFileIterator extends AbstractDbFileIterator {
     public void close() {
         // Ensures that a future call to next() will fail
         // next = null;
-        Database.getBufferPool().releasePage(tid, currPage.getId());
+        if(currPage.isDirty() == null)
+            Database.getBufferPool().releasePage(tid, currPage.getId());
         currPageNum = 0; // reset
         pageIterator = null;
         super.close();
