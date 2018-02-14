@@ -62,7 +62,7 @@ public class BufferPool {
     private LTM lockManager;
     // a map keeping track of which pages a transaction has touched
     private Map<TransactionId, Set<PageId>> transactionPageRecords;
-    private DbLogger logger = new DbLogger(getClass().getName(), getClass().getName() + ".log", false);
+    private DbLogger logger = new DbLogger(getClass().getName(), getClass().getName() + ".log", true);
     /**
      * Creates a BufferPool that caches up to numPages pages.
      *
@@ -197,9 +197,12 @@ public class BufferPool {
         try {
             lockManager.returnLock(tid, pid);
         } catch (DbException e){
-            e.printStackTrace();
-            System.exit(1);
+            logger.log("Db exception happened! Page already released");
+            return;
         }
+        assert transactionPageRecords.containsKey(tid);
+        assert transactionPageRecords.get(tid).contains(pid);
+        transactionPageRecords.get(tid).remove(pid);
         logger.log("end of releasePage()");
     }
 
@@ -233,31 +236,44 @@ public class BufferPool {
         //release BufferPool states related to transaction, release locks
         //commit: flush transaction pages
         //abort: revert changes
-        logger.log("In transactionComplete() and trying to release all locks transaction " + tid + " holds");
-        releaseAllLocks(tid);
+
         logger.log("done");
+        if(!commit)
+            logger.log("Try to abort transaction");
+        else
+            logger.log("Try to commit transaction");
+
         Set<PageId> pids = transactionPageRecords.get(tid);
-        transactionPageRecords.remove(tid);
+        logger.log("Transaction " + tid + " has " + pids.size() + " pages");
         for(PageId pid : pids){
             Page p = getPage(pid.hashCode());
+            logger.log("For page " + pid.hashCode());
             assert p != null;
-            if(p.isDirty() == null || (!p.isDirty().equals(tid)))
+            if(p.isDirty() == null || (!p.isDirty().equals(tid))) {
+                logger.log("not dirty or not dirtied by transaction: " + tid);
                 continue;
+            }
             // for a dirty page
             if(commit){
+                logger.log("Trying to flush page");
                 flushPage(pid); // flushPage already mark page as not dirty
             }else{ // revert
+                logger.log("Trying to revert page");
                 p = p.getBeforeImage();
                 p.markDirty(false, tid);
-                m.put(pid.hashCode(), p.getBeforeImage());
+                m.put(pid.hashCode(), p);
             }
+            logger.log("done");
         }
+        logger.log("In transactionComplete() and trying to release all locks transaction " + tid + " holds");
+        releaseAllLocks(tid);
     }
 
     private void releaseAllLocks(TransactionId tid){
         Set<PageId> pids = transactionPageRecords.get(tid);
         for(PageId pid : pids)
             releasePage(tid, pid);
+        transactionPageRecords.remove(tid);
     }
 
     /**
@@ -281,6 +297,9 @@ public class BufferPool {
         ArrayList<Page> modifiedPages = databaseFile.insertTuple(tid, t);
         logger.log("modifiedPages size: " + modifiedPages.size());
         for (Page page : modifiedPages) {
+//            page.markDirty(true, );
+            assert page.isDirty() == tid;
+            logger.log("Page " + page.getId() + " is marked dirty");
             putPage(page.getId().hashCode(), (HeapPage) page);
         }
     }
@@ -351,7 +370,7 @@ public class BufferPool {
 
     /** Write all pages of the specified transaction to disk.
      */
-    public synchronized  void flushPages(TransactionId tid) throws IOException {
+    public synchronized void flushPages(TransactionId tid) throws IOException {
         // some code goes here
         // not necessary for lab1|lab2
     }
@@ -360,32 +379,39 @@ public class BufferPool {
      * Discards a page from the buffer pool.
      * Flushes the page to disk to ensure dirty pages are updated on disk.
      */
-    private synchronized  void evictPage() throws DbException {
+    private synchronized void evictPage() throws DbException {
         // some code goes here
         // not necessary for lab1
 //        int k = m.keySet().iterator().next();
+        logger.log("In evict page()");
         Page pageToEvict = null;
         int k = 0;
         Set<Map.Entry<Integer, Page>> pages = m.entrySet();
         for(Map.Entry<Integer, Page> e : pages){
-            if(e.getValue().isDirty() == null){
+            Page p = e.getValue();
+            if(p.isDirty() == null && (!lockManager.isPageLock(p.getId()))){
                 pageToEvict = e.getValue();
                 k = e.getKey();
                 break;
             }
         }
-        if(pageToEvict == null)
+        if(pageToEvict == null) {
+            logger.log("all pages in the buffer pool are dirty. throw exception");
             throw new DbException("all pages in the buffer pool are dirty");
+        }
 
         try{
+            logger.log("Try to evict page: " + pageToEvict.getId());
             flushPage(pageToEvict.getId());
         }catch (IOException e){
             e.printStackTrace();
+            logger.log("new exception");
             throw new DbException("IO exception happens when trying to flush and evict a page to the disk");
         }
-
+        logger.log("evicted");
         m.remove(k);
         allPages.remove(pageToEvict);
         remainingPairNum++;
+        logger.log("End of evict page()");
     }
 }

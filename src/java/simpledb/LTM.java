@@ -55,6 +55,10 @@ public class LTM {
         }
     }
 
+    public boolean isPageLock(PageId pid){
+        return lockTable.containsKey(pid);
+    }
+
     public boolean holdsLock(TransactionId tid, PageId pid) {
         boolean ret;
         acquireStateLock();

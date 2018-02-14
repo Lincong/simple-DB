@@ -68,8 +68,12 @@ public class EvictionTest extends SimpleDbTestBase {
             Tuple v = ss.next();
             int v0 = ((IntField)v.getField(0)).getValue();
             int v1 = ((IntField)v.getField(1)).getValue();
+//            System.out.println("v0: " + v0);
+//            System.out.println("v1: " + v1);
+//            System.out.println();
             if (v0 == -42 && v1 == -43) {
                 assertFalse(found);
+                System.out.println("here");
                 found = true;
             }
         }
