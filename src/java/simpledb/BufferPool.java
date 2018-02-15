@@ -151,14 +151,6 @@ public class BufferPool {
         throws TransactionAbortedException, DbException {
         // some code goes here
         Catalog catalog = Database.getCatalog();
-        HeapFile dbFile;
-        try {
-            dbFile = (HeapFile) catalog.getDatabaseFile(pid.getTableId());
-
-        } catch (NoSuchElementException e) {
-            e.printStackTrace();
-            throw new DbException("Can not get DbFile for table with ID: " + pid.getTableId());
-        }
         logger.log("--Transaction" + tid + " trying to read page in buffer pool: " + pid + "----");
         logger.log("with " + (perm == Permissions.READ_ONLY ? " read " : " write ") + "lock");
         // trying to get a lock on the page. Might throw TransactionAbortedException
@@ -173,22 +165,30 @@ public class BufferPool {
         transactionPageRecords.put(tid, allPids);
         HeapPage pg = (HeapPage) getPage(pid.hashCode()); // check if page is already in the pool
         if(pg != null) {
-            logger.log("Page in buffer pool!");
+            logger.log("Transaction" + tid + ": Page in buffer pool!");
             return pg;
         }
-        logger.log("Not in buffer pool.");
+        logger.log("Transaction" + tid + ": Not in buffer pool.");
         synchronized (readingPageSynchronizer) {
             pg = (HeapPage) getPage(pid.hashCode());
             if(pg != null) {
-                logger.log("Page is read in buffer pool by some other thread!");
+                logger.log("Transaction" + tid + ": Page is read in buffer pool by some other thread!");
                 return pg;
             }
-            logger.log("Read page from the disk");
+            logger.log("Transaction" + tid + ": Read page from the disk");
+            HeapFile dbFile;
+            try {
+                dbFile = (HeapFile) catalog.getDatabaseFile(pid.getTableId());
+
+            } catch (NoSuchElementException e) {
+                e.printStackTrace();
+                throw new DbException("Transaction" + tid + ": Can not get DbFile for table with ID: " + pid.getTableId());
+            }
             // read page from the disk
             pg = (HeapPage) dbFile.readPage(pid);
             // store the newly read page into the buffer pool
             putPage(pid.hashCode(), pg);
-            logger.log("----End of get page in buffer pool----");
+            logger.log("---Transaction" + tid + ": End of get page in buffer pool----");
             return pg;
         }
     }
@@ -208,13 +208,13 @@ public class BufferPool {
         try {
             lockManager.returnLock(tid, pid);
         } catch (DbException e){
-            logger.log("Db exception happened! Page already released");
+            logger.log("Transaction" + tid + ": Db exception happened! Page already released on page " + pid);
             return;
         }
         assert transactionPageRecords.containsKey(tid);
         assert transactionPageRecords.get(tid).contains(pid);
         transactionPageRecords.get(tid).remove(pid);
-        logger.log("end of releasePage()");
+        logger.log("Transaction" + tid + ": end of releasePage() on page " + pid);
     }
 
     /**
@@ -254,8 +254,12 @@ public class BufferPool {
         else
             logger.log("Try to commit transaction");
 
+        if(!transactionPageRecords.containsKey(tid)){
+            logger.log("It's weird that transaction " + tid + " does not seem to have any pages");
+            return;
+        }
         Set<PageId> pids = transactionPageRecords.get(tid);
-//        logger.log("Transaction " + tid + " has " + pids.size() + " pages");
+        logger.log("Transaction " + tid + " has " + pids.size() + " pages");
         for(PageId pid : pids){
             Page p = getPage(pid.hashCode());
             logger.log("For page " + pid.hashCode());

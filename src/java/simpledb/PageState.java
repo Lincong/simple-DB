@@ -127,25 +127,8 @@ class PageState {
             this.pid = pid;
         }
 
-        public void lock(TransactionId tid, Permissions perm)
-                throws TransactionAbortedException, DbException {
-            boolean requestingReadLock = (perm == Permissions.READ_ONLY);
-            logger.log("In lock(), transaction " + tid + " trying to request " +
-                    (requestingReadLock ? "read" : "write") +" lock on page " + pid);
-
-            acquireStateLock();
-            logReadingTransactions();
-            logWritingTransactions();
-            boolean hasReadLock = readingTransactions.containsKey(tid);
-            boolean hasWriteLock = writingTransactions.containsKey(tid);
-            // make sure one transaction only has at most one lock
-            if((requestingReadLock && hasReadLock) || ((!requestingReadLock) && hasWriteLock)){
-                logger.log("already has the lock");
-                releaseStateLock();
-                return;
-            }
-
-            // TODO: check if there is any transaction that needs to be aborted
+        public void checkDeadLock(TransactionId tid, boolean requestingReadLock)
+                throws TransactionAbortedException {
             // Wait-die scheme: It is a non-preemptive technique for deadlock prevention
             for(TransactionId transId : writingTransactions.keySet()){
                 if(tid.getId() > transId.getId()) {
@@ -178,6 +161,27 @@ class PageState {
                     }
                 }
             }
+        }
+
+        public void lock(TransactionId tid, Permissions perm)
+                throws TransactionAbortedException, DbException {
+            boolean requestingReadLock = (perm == Permissions.READ_ONLY);
+            logger.log("In lock(), transaction " + tid + " trying to request " +
+                    (requestingReadLock ? "read" : "write") +" lock on page " + pid);
+
+            acquireStateLock();
+            logReadingTransactions();
+            logWritingTransactions();
+            boolean hasReadLock = readingTransactions.containsKey(tid);
+            boolean hasWriteLock = writingTransactions.containsKey(tid);
+            // make sure one transaction only has at most one lock
+            if((requestingReadLock && hasReadLock) || ((!requestingReadLock) && hasWriteLock)){
+                logger.log("already has the lock");
+                releaseStateLock();
+                return;
+            }
+
+            checkDeadLock(tid, requestingReadLock);
 
             TransactionThread tt = new TransactionThread(tid, Thread.currentThread());
             (requestingReadLock ? waitReadTransactions : waitWriteTransactions).put(tid, tt);
