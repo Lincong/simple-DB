@@ -214,7 +214,6 @@ class PageState {
                 // if a thread is interrupted that means the transaction in this thread should abort
                 throw new TransactionAbortedException();
             }
-            logger.log("at the end end lock()");
             logger.log("end of lock()");
         }
 

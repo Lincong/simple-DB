@@ -255,7 +255,7 @@ public class BufferPool {
             logger.log("Try to commit transaction");
 
         Set<PageId> pids = transactionPageRecords.get(tid);
-        logger.log("Transaction " + tid + " has " + pids.size() + " pages");
+//        logger.log("Transaction " + tid + " has " + pids.size() + " pages");
         for(PageId pid : pids){
             Page p = getPage(pid.hashCode());
             logger.log("For page " + pid.hashCode());
