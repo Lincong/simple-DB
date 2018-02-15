@@ -110,6 +110,8 @@ class PageState {
 
         private Map<TransactionId, TransactionThread> readingTransactions;
         private Map<TransactionId, TransactionThread> writingTransactions;
+        private Map<TransactionId, TransactionThread> waitReadTransactions;
+        private Map<TransactionId, TransactionThread> waitWriteTransactions;
         private Semaphore stateLock;
         private RWlock rwLock;
         private PageId pid;
@@ -118,6 +120,8 @@ class PageState {
         PageState(PageId pid){
             readingTransactions = new HashMap<>();
             writingTransactions = new HashMap<>();
+            waitReadTransactions = new HashMap<>();
+            waitWriteTransactions = new HashMap<>();
             stateLock = new Semaphore(1, true);
             rwLock = new RWlock();
             this.pid = pid;
@@ -129,9 +133,9 @@ class PageState {
             logger.log("In lock(), transaction " + tid + " trying to request " +
                     (requestingReadLock ? "read" : "write") +" lock on page " + pid);
 
-//            logReadingTransactions();
-//            logWritingTransactions();
             acquireStateLock();
+            logReadingTransactions();
+            logWritingTransactions();
             boolean hasReadLock = readingTransactions.containsKey(tid);
             boolean hasWriteLock = writingTransactions.containsKey(tid);
             // make sure one transaction only has at most one lock
@@ -150,6 +154,14 @@ class PageState {
                     throw new TransactionAbortedException();
                 }
             }
+
+            for(TransactionId transId : waitWriteTransactions.keySet()){
+                if(tid.getId() > transId.getId()) {
+                    logger.log("Transaction " + tid + " aborts since " + transId + " is older than it");
+                    releaseStateLock();
+                    throw new TransactionAbortedException();
+                }
+            }
             if(!requestingReadLock){
                 for(TransactionId transId : readingTransactions.keySet()){
                     if(tid.getId() > transId.getId()) {
@@ -158,11 +170,18 @@ class PageState {
                         throw new TransactionAbortedException();
                     }
                 }
+                for(TransactionId transId : waitReadTransactions.keySet()){
+                    if(tid.getId() > transId.getId()) {
+                        logger.log("Transaction " + tid + " aborts since " + transId + " is older than it");
+                        releaseStateLock();
+                        throw new TransactionAbortedException();
+                    }
+                }
             }
 
-            // only 2 cases are allowed
-            // 1. read lock -> write lock
-            // 2. no lock   -> r/w lock
+            TransactionThread tt = new TransactionThread(tid, Thread.currentThread());
+            (requestingReadLock ? waitReadTransactions : waitWriteTransactions).put(tid, tt);
+
             releaseStateLock();
             try {
                 if(requestingReadLock) { // read lock
@@ -184,9 +203,11 @@ class PageState {
                 }
                 // add the current lock request to the corresponding hash map
                 acquireStateLock();
-                TransactionThread tt = new TransactionThread(tid, Thread.currentThread());
+                tt = new TransactionThread(tid, Thread.currentThread());
                 logger.log("put the new transaction thread object into the map");
-                (perm == Permissions.READ_ONLY ? readingTransactions : writingTransactions).put(tid, tt);
+                // remove itself from the waiting set
+                (requestingReadLock ? waitReadTransactions : waitWriteTransactions).remove(tid);
+                (requestingReadLock ? readingTransactions : writingTransactions).put(tid, tt);
                 releaseStateLock();
 
             }catch (InterruptedException e){
@@ -194,16 +215,12 @@ class PageState {
                 throw new TransactionAbortedException();
             }
             logger.log("at the end end lock()");
-//            logReadingTransactions();
-//            logWritingTransactions();
             logger.log("end of lock()");
         }
 
         public boolean unlock(TransactionId tid)
                 throws DbException {
             logger.log("In unlock() for transaction " + tid + " on page " + pid);
-//            logReadingTransactions();
-//            logWritingTransactions();
             acquireStateLock();
             boolean hasReadLock = readingTransactions.containsKey(tid);
             logger.log("hasReadLock: " + hasReadLock);
@@ -228,8 +245,6 @@ class PageState {
             }
             boolean hasLock = (readingTransactions.isEmpty() && writingTransactions.isEmpty());
             releaseStateLock();
-//            logReadingTransactions();
-//            logWritingTransactions();
             logger.log("end of unlock() for transaction " + tid + " on page " + pid);
             return hasLock;
         }
